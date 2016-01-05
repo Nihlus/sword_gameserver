@@ -5,6 +5,8 @@ void game_state::add_player(tcp_sock& sock)
 {
     int id = gid++;
 
+    printf("Gained a player with id %i\n", id);
+
     player play;
     play.id = id;
     play.sock = sock;
@@ -71,17 +73,20 @@ void game_state::tick_all()
             byte_fetch fetch;
             fetch.ptr.swap(data);
 
-            int32_t found_canary = fetch.get<int32_t>();
-
-            while(found_canary != canary_start && !fetch.finished())
+            while(!fetch.finished())
             {
-                found_canary = fetch.get<int32_t>();
+                int32_t found_canary = fetch.get<int32_t>();
+
+                while(found_canary != canary_start && !fetch.finished())
+                {
+                    found_canary = fetch.get<int32_t>();
+                }
+
+                int32_t type = fetch.get<int32_t>();
+
+                if(type == message::FORWARDING)
+                    process_received_message(fetch, fd);
             }
-
-            int32_t type = fetch.get<int32_t>();
-
-            if(type == message::FORWARDING)
-                process_received_message(fetch, fd);
         }
     }
 }
@@ -103,7 +108,7 @@ void game_state::process_received_message(byte_fetch& arg, tcp_sock& who)
 
     byte_vector vec;
     vec.push_back(canary_start);
-    vec.push_back<int32_t>(message::FORWARDING);
+    vec.push_back(message::FORWARDING);
     vec.push_back<int32_t>(fetch.get<int32_t>()); ///playerid
     vec.push_back<int32_t>(fetch.get<int32_t>()); ///componentid
 
@@ -130,5 +135,6 @@ void game_state::process_received_message(byte_fetch& arg, tcp_sock& who)
 
     arg = fetch;
 
+    //printf("broad\n");
     broadcast(vec.ptr, who);
 }

@@ -53,7 +53,7 @@ using namespace std;
 ///:[
 int main()
 {
-    sock_info inf = try_tcp_connect("127.0.0.1", MASTER_PORT);
+    sock_info inf = try_tcp_connect(MASTER_IP, MASTER_PORT);
     tcp_sock to_server;
 
     tcp_sock my_server = tcp_host(GAMESERVER_PORT);
@@ -66,6 +66,11 @@ int main()
 
     while(going)
     {
+        if(sock_readable(to_server))
+        {
+            auto dat = tcp_recv(to_server);
+        }
+
         if(!to_server.valid())
         {
             if(!inf.within_timeout())
@@ -101,6 +106,7 @@ int main()
             sockets.push_back(new_fd);
         }
 
+        ///from here on, the code is totally untested
         for(int i=0; i<sockets.size(); i++)
         {
             tcp_sock fd = sockets[i];
@@ -119,29 +125,42 @@ int main()
                 byte_fetch fetch;
                 fetch.ptr.swap(data);
 
-                int32_t found_canary = fetch.get<int32_t>();
-
-                while(found_canary != canary_start && !fetch.finished())
+                while(!fetch.finished())
                 {
-                    found_canary = fetch.get<int32_t>();
-                }
+                    int32_t found_canary = fetch.get<int32_t>();
 
-                int32_t type = fetch.get<int32_t>();
+                    while(found_canary != canary_start && !fetch.finished())
+                    {
+                        found_canary = fetch.get<int32_t>();
+                    }
 
-                if(type == message::CLIENTJOINREQUEST)
-                {
-                    int32_t found_end = fetch.get<int32_t>();
+                    int32_t type = fetch.get<int32_t>();
 
-                    if(found_end != canary_end)
+                    if(type == message::CLIENTJOINREQUEST)
+                    {
+                        int32_t found_end = fetch.get<int32_t>();
+
+                        if(found_end != canary_end)
+                            continue;
+
+                        my_state.add_player(fd);
+                        ///really need to pipe back player id
+
+                        byte_vector vec;
+                        vec.push_back(canary_start);
+                        vec.push_back(message::CLIENTJOINACK);
+                        vec.push_back<int32_t>(my_state.player_list.back().id);
+                        vec.push_back(canary_end);
+
+                        tcp_send(fd, vec.ptr);
+
+                        printf("sending ack\n");
+
+                        sockets.erase(sockets.begin() + i);
+                        i--;
                         continue;
-
-                    my_state.add_player(fd);
-
-                    sockets.erase(sockets.begin() + i);
-                    i--;
-                    continue;
+                    }
                 }
-
                 ///client pushing data to other clients
             }
         }
