@@ -16,7 +16,11 @@ struct player
 
     udp_sock sock;
     sockaddr_storage store;
+    sf::Clock time_since_last_message;
 };
+
+
+bool operator==(sockaddr_storage& s1, sockaddr_storage& s2);
 
 ///so the client will send something like
 ///update component playerid componentenum value
@@ -27,6 +31,8 @@ struct game_state
     int map_num = 0; ///????
 
     int gid = 0;
+
+    float timeout_time_ms = 5000; ///5 seconds
 
     std::vector<player> player_list;
 
@@ -39,6 +45,8 @@ struct game_state
     void tick_all();
 
     void process_received_message(byte_fetch& fetch, sockaddr_storage& who);
+
+    void reset_player_disconnect_timer(sockaddr_storage& store);
 };
 
 

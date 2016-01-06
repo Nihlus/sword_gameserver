@@ -51,12 +51,29 @@ using namespace std;
 ///so as it turns out, you must use canaries with tcp as its a stream protocol
 ///that will by why the map client doesn't work
 ///:[
-int main()
+int main(int argc, char* argv[])
 {
     sock_info inf = try_tcp_connect(MASTER_IP, MASTER_PORT);
     tcp_sock to_server;
 
-    udp_sock my_server = udp_host(GAMESERVER_PORT);
+    std::string host_port = GAMESERVER_PORT;
+
+    for(int i=1; i<argc; i++)
+    {
+        if(strncmp(argv[i], "-port", strlen("-port")) == 0)
+        {
+            if(i + 1 < argc)
+            {
+                host_port = argv[i+1];
+            }
+        }
+    }
+
+    uint32_t pnum = atoi(host_port.c_str());
+
+    udp_sock my_server = udp_host(host_port);
+
+    printf("Registered on port %s\n", my_server.get_host_port().c_str());
 
     //std::vector<tcp_sock> sockets;
     //std::vector<sockaddr_store> store_sock;
@@ -90,6 +107,7 @@ int main()
                 byte_vector vec;
                 vec.push_back(canary_start);
                 vec.push_back(message::GAMESERVER);
+                vec.push_back<uint32_t>(pnum);
                 vec.push_back(canary_end);
 
                 tcp_send(to_server, vec.ptr);
@@ -202,6 +220,9 @@ int main()
 
                     //udp_pipe_connect(new_sock, (const sockaddr*)&store);
 
+                    printf("Player joined %s:%s\n", get_addr_ip(store).c_str(), get_addr_port(store).c_str());
+
+
                     my_state.add_player(my_server, store);
                     ///really need to pipe back player id
 
@@ -228,6 +249,16 @@ int main()
                 {
                     my_state.process_received_message(fetch, store);
                 }
+
+                my_state.reset_player_disconnect_timer(store);
+
+                /*for(auto& i : my_state.player_list)
+                {
+                    if(i.store == store)
+                    {
+                        i.time_since_last_message.restart();
+                    }
+                }*/
             }
                 ///client pushing data to other clients
         }

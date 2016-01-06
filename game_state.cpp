@@ -7,6 +7,7 @@ void game_state::add_player(udp_sock& sock, sockaddr_storage store)
 
     printf("Gained a player with id %i\n", id);
 
+    ///last message time set to 0
     player play;
     play.id = id;
     play.sock = sock;
@@ -42,6 +43,17 @@ void game_state::cull_disconnected_players()
             i--;
         }
     }*/
+
+    for(int i=0; i<player_list.size(); i++)
+    {
+        if(player_list[i].time_since_last_message.getElapsedTime().asMicroseconds() / 1000.f > timeout_time_ms)
+        {
+            printf("Player timeout\n");// %s:%s\n", get_peer_ip(player_list[i]].store))
+
+            player_list.erase(player_list.begin() + i);
+            i--;
+        }
+    }
 }
 
 bool operator==(sockaddr_storage& s1, sockaddr_storage& s2)
@@ -57,6 +69,17 @@ bool operator==(sockaddr_storage& s1, sockaddr_storage& s2)
         return true;
 
     return false;
+}
+
+void game_state::reset_player_disconnect_timer(sockaddr_storage& store)
+{
+    for(auto& i : player_list)
+    {
+        if(i.store == store)
+        {
+            i.time_since_last_message.restart();
+        }
+    }
 }
 
 void game_state::broadcast(const std::vector<char>& dat, int& to_skip)
@@ -116,7 +139,7 @@ void game_state::tick_all()
             if(fd.invalid())
                 continue;
 
-            int which_player = -1;
+            /*int which_player = -1;
 
             for(int j=0; j<player_list.size(); j++)
             {
@@ -126,7 +149,7 @@ void game_state::tick_all()
 
                     //printf("received from %i\n", j);
                 }
-            }
+            }*/
 
             //printf("F %i\n", which_player);
 
