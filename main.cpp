@@ -56,9 +56,10 @@ int main()
     sock_info inf = try_tcp_connect(MASTER_IP, MASTER_PORT);
     tcp_sock to_server;
 
-    tcp_sock my_server = tcp_host(GAMESERVER_PORT);
+    udp_sock my_server = udp_host(GAMESERVER_PORT);
 
-    std::vector<tcp_sock> sockets;
+    //std::vector<tcp_sock> sockets;
+    //std::vector<sockaddr_store> store_sock;
 
     game_state my_state;
 
@@ -99,15 +100,15 @@ int main()
             continue;
         }
 
-        tcp_sock new_fd = conditional_accept(my_server);
+        /*tcp_sock new_fd = conditional_accept(my_server);
 
         if(new_fd.valid())
         {
             sockets.push_back(new_fd);
-        }
+        }*/
 
         ///from here on, the code is totally untested
-        for(int i=0; i<sockets.size(); i++)
+        /*for(int i=0; i<sockets.size(); i++)
         {
             tcp_sock fd = sockets[i];
 
@@ -163,9 +164,75 @@ int main()
                 }
                 ///client pushing data to other clients
             }
+        }*/
+
+        bool any_read = true;
+
+        while(any_read && sock_readable(my_server))
+        {
+            sockaddr_storage store;
+
+            auto data = udp_receive_from(my_server, &store);
+
+            any_read = data.size() > 0;
+
+            byte_fetch fetch;
+            fetch.ptr.swap(data);
+
+            while(!fetch.finished())
+            {
+                int32_t found_canary = fetch.get<int32_t>();
+
+                while(found_canary != canary_start && !fetch.finished())
+                {
+                    found_canary = fetch.get<int32_t>();
+                }
+
+                int32_t type = fetch.get<int32_t>();
+
+                if(type == message::CLIENTJOINREQUEST)
+                {
+                    int32_t found_end = fetch.get<int32_t>();
+
+                    if(found_end != canary_end)
+                        continue;
+
+                    //udp_sock new_sock = udp_host(GAMESERVER_PORT);
+                    //udp_sock new_sock = udp_getsocket();
+
+                    //udp_pipe_connect(new_sock, (const sockaddr*)&store);
+
+                    my_state.add_player(my_server, store);
+                    ///really need to pipe back player id
+
+                    byte_vector vec;
+                    vec.push_back(canary_start);
+                    vec.push_back(message::CLIENTJOINACK);
+                    vec.push_back<int32_t>(my_state.player_list.back().id);
+                    vec.push_back(canary_end);
+
+                    //tcp_send(fd, vec.ptr);
+
+                    udp_send_to(my_server, vec.ptr, (const sockaddr*)&store);
+                    //udp_send_to(new_sock, vec.ptr, (const sockaddr*)&store);
+                    //udp_send(new_sock, vec.ptr);
+
+                    printf("sending ack\n");
+
+                    //sockets.erase(sockets.begin() + i);
+                    //i--;
+                    continue;
+                }
+
+                if(type == message::FORWARDING)
+                {
+                    my_state.process_received_message(fetch, store);
+                }
+            }
+                ///client pushing data to other clients
         }
 
-        my_state.tick_all();
+        //my_state.tick_all();
 
         my_state.cull_disconnected_players();
     }

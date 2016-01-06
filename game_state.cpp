@@ -1,7 +1,7 @@
 #include "game_state.hpp"
 #include "../master_server/network_messages.hpp"
 
-void game_state::add_player(tcp_sock& sock)
+void game_state::add_player(udp_sock& sock, sockaddr_storage store)
 {
     int id = gid++;
 
@@ -10,13 +10,14 @@ void game_state::add_player(tcp_sock& sock)
     player play;
     play.id = id;
     play.sock = sock;
+    play.store = store;
 
     player_list.push_back(play);
 }
 
 void game_state::cull_disconnected_players()
 {
-    for(int i=0; i<player_list.size(); i++)
+    /*for(int i=0; i<player_list.size(); i++)
     {
         tcp_sock fd = player_list[i].sock;
 
@@ -39,20 +40,58 @@ void game_state::cull_disconnected_players()
             player_list.erase(player_list.begin() + i);
             i--;
         }
-    }
+    }*/
 }
 
-void game_state::broadcast(const std::vector<char>& dat, tcp_sock& to_skip)
+bool operator==(sockaddr_storage& s1, sockaddr_storage& s2)
+{
+    //if(memcmp(&s1, &s2, sizeof(s1)) == 0)
+    //    return true;
+
+    sockaddr_in* si1 = (sockaddr_in*)&s1;
+    sockaddr_in* si2 = (sockaddr_in*)&s2;
+
+    if(si1->sin_port == si2->sin_port &&
+       si1->sin_addr.s_addr == si2->sin_addr.s_addr)
+        return true;
+
+    return false;
+}
+
+void game_state::broadcast(const std::vector<char>& dat, int& to_skip)
 {
     for(int i=0; i<player_list.size(); i++)
     {
-        tcp_sock& fd = player_list[i].sock;
+        udp_sock& fd = player_list[i].sock;
+        sockaddr_storage store = player_list[i].store;
 
-        if(fd == to_skip)
+        if(i == to_skip)
             continue;
 
-        tcp_send(fd, dat);
+        udp_send_to(fd, dat, (sockaddr*)&store);
     }
+}
+
+void game_state::broadcast(const std::vector<char>& dat, sockaddr_storage& to_skip)
+{
+    int c = 0;
+
+    for(int i=0; i<player_list.size(); i++)
+    {
+        udp_sock& fd = player_list[i].sock;
+        sockaddr_storage store = player_list[i].store;
+
+        if(store == to_skip)
+        {
+            c++;
+            continue;
+        }
+
+        udp_send_to(fd, dat, (sockaddr*)&store);
+    }
+
+    if(c > 1)
+        printf("ip conflict\n");
 }
 
 void game_state::tick_all()
@@ -61,14 +100,34 @@ void game_state::tick_all()
     {
         player& play = player_list[i];
 
-        tcp_sock& fd = play.sock;
+        udp_sock& fd = play.sock;
 
-        if(sock_readable(fd))
+        bool any_read = true;
+
+        while(any_read && sock_readable(fd))
         {
-            auto data = tcp_recv(fd);
+            sockaddr_storage store;
+
+            auto data = udp_receive_from(fd, &store);
+
+            any_read = data.size() > 0;
 
             if(fd.invalid())
                 continue;
+
+            int which_player = -1;
+
+            for(int j=0; j<player_list.size(); j++)
+            {
+                if(player_list[j].store == store)
+                {
+                    which_player = j;
+
+                    //printf("received from %i\n", j);
+                }
+            }
+
+            //printf("F %i\n", which_player);
 
             byte_fetch fetch;
             fetch.ptr.swap(data);
@@ -85,13 +144,13 @@ void game_state::tick_all()
                 int32_t type = fetch.get<int32_t>();
 
                 if(type == message::FORWARDING)
-                    process_received_message(fetch, fd);
+                    process_received_message(fetch, store);
             }
         }
     }
 }
 
-void game_state::process_received_message(byte_fetch& arg, tcp_sock& who)
+void game_state::process_received_message(byte_fetch& arg, sockaddr_storage& who)
 {
     ///copy
     byte_fetch fetch = arg;
@@ -135,6 +194,5 @@ void game_state::process_received_message(byte_fetch& arg, tcp_sock& who)
 
     arg = fetch;
 
-    //printf("broad\n");
     broadcast(vec.ptr, who);
 }

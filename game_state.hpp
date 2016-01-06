@@ -14,7 +14,8 @@ struct player
     ///vec3f pos;
     ///vec3f rot;
 
-    tcp_sock sock;
+    udp_sock sock;
+    sockaddr_storage store;
 };
 
 ///so the client will send something like
@@ -29,14 +30,15 @@ struct game_state
 
     std::vector<player> player_list;
 
-    void broadcast(const std::vector<char>& dat, tcp_sock& to_skip);
+    void broadcast(const std::vector<char>& dat, int& to_skip);
+    void broadcast(const std::vector<char>& dat, sockaddr_storage& to_skip);
 
     void cull_disconnected_players();
-    void add_player(tcp_sock& sock);
+    void add_player(udp_sock& sock, sockaddr_storage store);
 
     void tick_all();
 
-    void process_received_message(byte_fetch& fetch, tcp_sock& who);
+    void process_received_message(byte_fetch& fetch, sockaddr_storage& who);
 };
 
 
