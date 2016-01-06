@@ -15,6 +15,7 @@ void game_state::add_player(udp_sock& sock, sockaddr_storage store)
     player_list.push_back(play);
 }
 
+///need to heartbeat
 void game_state::cull_disconnected_players()
 {
     /*for(int i=0; i<player_list.size(); i++)
@@ -91,7 +92,7 @@ void game_state::broadcast(const std::vector<char>& dat, sockaddr_storage& to_sk
     }
 
     if(c > 1)
-        printf("ip conflict\n");
+        printf("ip conflict ");
 }
 
 void game_state::tick_all()

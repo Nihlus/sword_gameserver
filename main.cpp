@@ -232,6 +232,8 @@ int main()
                 ///client pushing data to other clients
         }
 
+        sf::sleep(sf::milliseconds(1));
+
         //my_state.tick_all();
 
         my_state.cull_disconnected_players();
