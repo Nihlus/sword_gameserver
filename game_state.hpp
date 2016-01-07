@@ -2,6 +2,7 @@
 #define GAME_STATE_HPP_INCLUDED
 
 #include <net/shared.hpp>
+#include "game_modes.hpp"
 
 struct player
 {
@@ -19,6 +20,17 @@ struct player
     sf::Clock time_since_last_message;
 };
 
+namespace game_data
+{
+    const float round_default = 10; ///10 seconds for testing
+}
+
+struct session_state
+{
+    int32_t kills = 0;
+    sf::Clock time_elapsed;
+};
+
 
 bool operator==(sockaddr_storage& s1, sockaddr_storage& s2);
 
@@ -29,6 +41,12 @@ struct game_state
     int max_players = 10;
 
     int map_num = 0; ///????
+
+    ///we really need to handle this all serverside
+    ///which means the server is gunna have to keep track
+    ///lets implement a simple kill counter
+    game_mode_t current_game_mode; ///?
+    session_state current_session_state;
 
     int gid = 0;
 
