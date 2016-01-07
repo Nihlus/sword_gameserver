@@ -118,6 +118,7 @@ void game_state::broadcast(const std::vector<char>& dat, sockaddr_storage& to_sk
         printf("ip conflict ");
 }
 
+#if 0
 void game_state::tick_all()
 {
     for(int i=0; i<player_list.size(); i++)
@@ -173,6 +174,62 @@ void game_state::tick_all()
         }
     }
 }
+#endif
+
+int32_t game_state::sockaddr_to_playerid(sockaddr_storage& who)
+{
+    for(auto& i : player_list)
+    {
+        if(i.store == who)
+            return i.id;
+    }
+
+    return -1;
+}
+
+///do kill confirmer updates here
+void game_state::tick()
+{
+    const float player_kill_confirm = 0.8;
+
+    int players_needed_to_confirm_kill = (player_list.size() * player_kill_confirm);
+
+    for(auto it = kill_confirmer.begin(); it != kill_confirmer.end();)
+    {
+        int32_t who_is_reported_dead = it->first;
+
+        kill_count_timer ktime = it->second;
+
+        ///if the timer elapsed and there's enough reports
+        ///he's dead
+        ///prevents more reports than necessary breaking stuff
+        if(ktime.player_ids_reported_deaths.size() >= players_needed_to_confirm_kill &&
+           ktime.elapsed_time_since_started.getElapsedTime().asMicroseconds() / 1000.f > ktime.max_time)
+        {
+            ///gunna need to do teams later!
+            current_session_state.kills++;
+
+            it = kill_confirmer.erase(it);
+
+            printf("bring out your dead\n");
+        }
+        else
+        if(ktime.elapsed_time_since_started.getElapsedTime().asMicroseconds() / 1000.f > ktime.max_time)
+        {
+            it = kill_confirmer.erase(it);
+
+            ///well, this cant deal with hacks
+            ///only packet loss
+            ///as hp is authoritative from the client
+            ///so if I hit you, itll definitely register
+            ///unless the packet is gone
+            ///but later we can extend the principle of this mechanism
+            printf("hacks or packet loss\n");
+        }
+        else
+            it++;
+    }
+}
 
 void game_state::process_received_message(byte_fetch& arg, sockaddr_storage& who)
 {
@@ -219,4 +276,50 @@ void game_state::process_received_message(byte_fetch& arg, sockaddr_storage& who
     arg = fetch;
 
     broadcast(vec.ptr, who);
+}
+
+void game_state::process_reported_message(byte_fetch& arg, sockaddr_storage& who)
+{
+    byte_fetch fetch = arg;
+
+    ///canary_start
+    ///message::REPORT
+    ///TYPE ///so we start here
+    ///PLAYERID ///optional?
+    ///LEN
+    ///DATA
+    ///canary_end
+
+    int32_t report_type = fetch.get<int32_t>();
+    int32_t player_id = fetch.get<int32_t>(); ///who is reported dead
+
+    int32_t len = fetch.get<int32_t>();
+
+    std::vector<char> dat;
+
+    for(int i=0; i<len; i++)
+    {
+        dat.push_back(fetch.get<uint8_t>());
+    }
+
+    int32_t found_end = fetch.get<int32_t>();
+
+    if(found_end != canary_end)
+    {
+        printf("canary mismatch in processed reported message\n");
+        return;
+    }
+
+    if(report_type == (int32_t)report::DEATH)
+    {
+        kill_count_timer& killcount = kill_confirmer[player_id];
+
+        int32_t who_sent_message = sockaddr_to_playerid(who);
+
+        killcount.player_ids_reported_deaths.insert(who_sent_message);
+
+        printf("Kill reported\n");
+    }
+
+    arg = fetch;
 }

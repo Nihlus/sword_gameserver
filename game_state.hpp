@@ -3,6 +3,8 @@
 
 #include <net/shared.hpp>
 #include "game_modes.hpp"
+#include <set>
+#include <map>
 
 struct player
 {
@@ -31,14 +33,21 @@ struct session_state
     sf::Clock time_elapsed;
 };
 
-
 bool operator==(sockaddr_storage& s1, sockaddr_storage& s2);
+
+struct kill_count_timer
+{
+    std::set<int32_t> player_ids_reported_deaths; ///who reported the death ids
+    sf::Clock elapsed_time_since_started;
+    const float max_time = 1000.f; ///1s window
+};
 
 ///so the client will send something like
 ///update component playerid componentenum value
 struct game_state
 {
     int max_players = 10;
+    //int num_players = 0;
 
     int map_num = 0; ///????
 
@@ -47,6 +56,9 @@ struct game_state
     ///lets implement a simple kill counter
     game_mode_t current_game_mode; ///?
     session_state current_session_state;
+
+    ///maps player id who died to kill count structure
+    std::map<int32_t, kill_count_timer> kill_confirmer;
 
     int gid = 0;
 
@@ -60,9 +72,14 @@ struct game_state
     void cull_disconnected_players();
     void add_player(udp_sock& sock, sockaddr_storage store);
 
-    void tick_all();
+    int32_t sockaddr_to_playerid(sockaddr_storage& who);
+
+    //void tick_all();
+
+    void tick();
 
     void process_received_message(byte_fetch& fetch, sockaddr_storage& who);
+    void process_reported_message(byte_fetch& fetch, sockaddr_storage& who);
 
     void reset_player_disconnect_timer(sockaddr_storage& store);
 };

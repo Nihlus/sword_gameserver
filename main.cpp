@@ -250,6 +250,11 @@ int main(int argc, char* argv[])
                     my_state.process_received_message(fetch, store);
                 }
 
+                if(type == message::REPORT)
+                {
+                    my_state.process_reported_message(fetch, store);
+                }
+
                 my_state.reset_player_disconnect_timer(store);
 
                 /*for(auto& i : my_state.player_list)
@@ -266,6 +271,8 @@ int main(int argc, char* argv[])
         sf::sleep(sf::milliseconds(1));
 
         //my_state.tick_all();
+
+        my_state.tick();
 
         my_state.cull_disconnected_players();
     }
