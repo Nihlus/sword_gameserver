@@ -210,39 +210,7 @@ int main(int argc, char* argv[])
 
                 if(type == message::CLIENTJOINREQUEST)
                 {
-                    int32_t found_end = fetch.get<int32_t>();
-
-                    if(found_end != canary_end)
-                        continue;
-
-                    //udp_sock new_sock = udp_host(GAMESERVER_PORT);
-                    //udp_sock new_sock = udp_getsocket();
-
-                    //udp_pipe_connect(new_sock, (const sockaddr*)&store);
-
-                    printf("Player joined %s:%s\n", get_addr_ip(store).c_str(), get_addr_port(store).c_str());
-
-
-                    my_state.add_player(my_server, store);
-                    ///really need to pipe back player id
-
-                    byte_vector vec;
-                    vec.push_back(canary_start);
-                    vec.push_back(message::CLIENTJOINACK);
-                    vec.push_back<int32_t>(my_state.player_list.back().id);
-                    vec.push_back(canary_end);
-
-                    //tcp_send(fd, vec.ptr);
-
-                    udp_send_to(my_server, vec.ptr, (const sockaddr*)&store);
-                    //udp_send_to(new_sock, vec.ptr, (const sockaddr*)&store);
-                    //udp_send(new_sock, vec.ptr);
-
-                    printf("sending ack\n");
-
-                    //sockets.erase(sockets.begin() + i);
-                    //i--;
-                    continue;
+                    my_state.process_join_request(my_server, fetch, store);
                 }
 
                 if(type == message::FORWARDING)
@@ -254,6 +222,8 @@ int main(int argc, char* argv[])
                 {
                     my_state.process_reported_message(fetch, store);
                 }
+
+                //printf("client %s:%s\n", get_addr_ip(store).c_str(), get_addr_port(store).c_str());
 
                 my_state.reset_player_disconnect_timer(store);
 
@@ -273,6 +243,10 @@ int main(int argc, char* argv[])
         //my_state.tick_all();
 
         my_state.tick();
+
+        my_state.balance_teams();
+
+        my_state.periodic_team_broadcast();
 
         my_state.cull_disconnected_players();
     }

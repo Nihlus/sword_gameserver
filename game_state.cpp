@@ -16,34 +16,22 @@ void game_state::add_player(udp_sock& sock, sockaddr_storage store)
     player_list.push_back(play);
 }
 
+int game_state::number_of_team(int team_id)
+{
+    int c = 0;
+
+    for(auto& i : player_list)
+    {
+        if(i.team == team_id)
+            c++;
+    }
+
+    return c;
+}
+
 ///need to heartbeat
 void game_state::cull_disconnected_players()
 {
-    /*for(int i=0; i<player_list.size(); i++)
-    {
-        tcp_sock fd = player_list[i].sock;
-
-        if(sock_readable(fd))
-        {
-            auto data = tcp_recv(fd);
-
-            if(fd.invalid())
-            {
-                player_list[i].sock.close();
-            }
-        }
-
-        if(!player_list[i].sock.valid())
-        {
-            printf("player died\n");
-
-            player_list[i].sock.close();
-
-            player_list.erase(player_list.begin() + i);
-            i--;
-        }
-    }*/
-
     for(int i=0; i<player_list.size(); i++)
     {
         if(player_list[i].time_since_last_message.getElapsedTime().asMicroseconds() / 1000.f > timeout_time_ms)
@@ -58,9 +46,6 @@ void game_state::cull_disconnected_players()
 
 bool operator==(sockaddr_storage& s1, sockaddr_storage& s2)
 {
-    //if(memcmp(&s1, &s2, sizeof(s1)) == 0)
-    //    return true;
-
     sockaddr_in* si1 = (sockaddr_in*)&s1;
     sockaddr_in* si2 = (sockaddr_in*)&s2;
 
@@ -322,4 +307,103 @@ void game_state::process_reported_message(byte_fetch& arg, sockaddr_storage& who
     }
 
     arg = fetch;
+}
+
+void game_state::process_join_request(udp_sock& my_server, byte_fetch& fetch, sockaddr_storage& who)
+{
+    int32_t found_end = fetch.get<int32_t>();
+
+    if(found_end != canary_end)
+        return;
+
+    printf("Player joined %s:%s\n", get_addr_ip(who).c_str(), get_addr_port(who).c_str());
+
+    add_player(my_server, who);
+    ///really need to pipe back player id
+
+    ///should really dynamically organise teams
+    ///so actually that's what I'll do
+    byte_vector vec;
+    vec.push_back(canary_start);
+    vec.push_back(message::CLIENTJOINACK);
+    vec.push_back<int32_t>(player_list.back().id);
+    vec.push_back(canary_end);
+
+    udp_send_to(my_server, vec.ptr, (const sockaddr*)&who);
+
+    printf("sending ack\n");
+}
+
+void game_state::balance_teams()
+{
+    if(number_of_team(0) == number_of_team(1))
+        return;
+
+    ///odd number of players, rest in peace
+    if(abs(number_of_team(1) - number_of_team(0)) == 1)
+        return;
+
+    int t0 = number_of_team(0);
+    int t1 = number_of_team(1);
+
+    int team_to_swap = t1 > t0 ? 1 : 0;
+    int team_to_swap_to = t1 < t0 ? 1 : 0;
+
+    int extra = abs(number_of_team(1) - number_of_team(0));
+
+    int num_to_swap = extra / 2;
+
+    int num_swapped = 0;
+
+    for(auto& i : player_list)
+    {
+        if(i.team == team_to_swap && num_swapped < num_to_swap)
+        {
+            i.team = team_to_swap_to;
+            ///network
+
+            byte_vector vec;
+            vec.push_back(canary_start);
+            vec.push_back(message::TEAMASSIGNMENT);
+            vec.push_back<int32_t>(i.id);
+            vec.push_back<int32_t>(i.team);
+            vec.push_back(canary_end);
+
+            //udp_send_to(i.sock, vec.ptr, (const sockaddr*)&i.store);
+
+            int no_player = -1;
+
+            broadcast(vec.ptr, no_player);
+
+            num_swapped++;
+        }
+    }
+}
+
+void game_state::periodic_team_broadcast()
+{
+    static sf::Clock clk;
+
+    ///once per second
+    float broadcast_every_ms = 5000.f;
+
+    if(clk.getElapsedTime().asMicroseconds() / 1000.f < broadcast_every_ms)
+        return;
+
+    clk.restart();
+
+    for(auto& i : player_list)
+    {
+        ///network
+        byte_vector vec;
+        vec.push_back(canary_start);
+        vec.push_back(message::TEAMASSIGNMENT);
+        vec.push_back<int32_t>(i.id);
+        vec.push_back<int32_t>(i.team);
+        vec.push_back(canary_end);
+
+        int no_player = -1;
+
+        broadcast(vec.ptr, no_player);
+    }
 }

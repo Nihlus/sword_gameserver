@@ -10,6 +10,7 @@ struct player
 {
     //int32_t player_slot = 0;
     int32_t id = 0; ///per game
+    int32_t team = 0;
 
     ///I don't know if I do want to store these
     ///I could carry on using the existing broadcast system
@@ -62,15 +63,19 @@ struct game_state
 
     int gid = 0;
 
-    float timeout_time_ms = 5000; ///5 seconds
+    float timeout_time_ms = 3000; ///3 seconds
 
     std::vector<player> player_list;
+
+    int number_of_team(int team_id);
 
     void broadcast(const std::vector<char>& dat, int& to_skip);
     void broadcast(const std::vector<char>& dat, sockaddr_storage& to_skip);
 
     void cull_disconnected_players();
     void add_player(udp_sock& sock, sockaddr_storage store);
+
+    ///for the moment just suck at it
 
     int32_t sockaddr_to_playerid(sockaddr_storage& who);
 
@@ -80,6 +85,11 @@ struct game_state
 
     void process_received_message(byte_fetch& fetch, sockaddr_storage& who);
     void process_reported_message(byte_fetch& fetch, sockaddr_storage& who);
+    void process_join_request(udp_sock& sock, byte_fetch& fetch, sockaddr_storage& who);
+
+    void balance_teams();
+
+    void periodic_team_broadcast();
 
     void reset_player_disconnect_timer(sockaddr_storage& store);
 };
