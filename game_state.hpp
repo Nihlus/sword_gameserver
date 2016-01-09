@@ -34,6 +34,12 @@ struct session_state
     sf::Clock time_elapsed;
 };
 
+struct session_boundaries
+{
+    int32_t max_kills = 2;
+    float max_time_ms = 10000.f;
+};
+
 bool operator==(sockaddr_storage& s1, sockaddr_storage& s2);
 
 struct kill_count_timer
@@ -57,13 +63,14 @@ struct game_state
     ///lets implement a simple kill counter
     game_mode_t current_game_mode; ///?
     session_state current_session_state;
+    session_boundaries current_session_boundaries; ///this should really be per gamemode
 
     ///maps player id who died to kill count structure
     std::map<int32_t, kill_count_timer> kill_confirmer;
 
     int gid = 0;
 
-    float timeout_time_ms = 3000; ///3 seconds
+    float timeout_time_ms = 5000; ///3 seconds
 
     std::vector<player> player_list;
 

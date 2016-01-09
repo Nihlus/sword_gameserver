@@ -197,7 +197,7 @@ int main(int argc, char* argv[])
             byte_fetch fetch;
             fetch.ptr.swap(data);
 
-            while(!fetch.finished())
+            while(!fetch.finished() && any_read)
             {
                 int32_t found_canary = fetch.get<int32_t>();
 
@@ -213,14 +213,18 @@ int main(int argc, char* argv[])
                     my_state.process_join_request(my_server, fetch, store);
                 }
 
-                if(type == message::FORWARDING)
+                else if(type == message::FORWARDING)
                 {
                     my_state.process_received_message(fetch, store);
                 }
 
-                if(type == message::REPORT)
+                else if(type == message::REPORT)
                 {
                     my_state.process_reported_message(fetch, store);
+                }
+                else
+                {
+                    printf("err %i ", type);
                 }
 
                 //printf("client %s:%s\n", get_addr_ip(store).c_str(), get_addr_port(store).c_str());
@@ -244,9 +248,9 @@ int main(int argc, char* argv[])
 
         my_state.tick();
 
-        my_state.balance_teams();
+        //my_state.balance_teams();
 
-        my_state.periodic_team_broadcast();
+        //my_state.periodic_team_broadcast();
 
         my_state.cull_disconnected_players();
     }

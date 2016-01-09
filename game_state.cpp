@@ -385,7 +385,7 @@ void game_state::periodic_team_broadcast()
     static sf::Clock clk;
 
     ///once per second
-    float broadcast_every_ms = 5000.f;
+    float broadcast_every_ms = 1000.f;
 
     if(clk.getElapsedTime().asMicroseconds() / 1000.f < broadcast_every_ms)
         return;
