@@ -80,6 +80,8 @@ int main(int argc, char* argv[])
 
     game_state my_state;
 
+    my_state.set_map(0);
+
     bool going = true;
 
     while(going)
@@ -222,6 +224,10 @@ int main(int argc, char* argv[])
                 {
                     my_state.process_reported_message(fetch, store);
                 }
+                else if(type == message::RESPAWNREQUEST)
+                {
+                    my_state.process_respawn_request(my_server, fetch, store);
+                }
                 else
                 {
                     printf("err %i ", type);
@@ -248,9 +254,11 @@ int main(int argc, char* argv[])
 
         my_state.tick();
 
-        //my_state.balance_teams();
+        my_state.balance_teams();
 
-        //my_state.periodic_team_broadcast();
+        my_state.periodic_team_broadcast();
+
+        my_state.periodic_gamemode_stats_broadcast();
 
         my_state.cull_disconnected_players();
     }

@@ -29,6 +29,17 @@ int game_state::number_of_team(int team_id)
     return c;
 }
 
+int32_t game_state::get_team_from_player_id(int32_t id)
+{
+    for(auto& i : player_list)
+    {
+        if(i.id == id)
+            return i.team;
+    }
+
+    return -1;
+}
+
 ///need to heartbeat
 void game_state::cull_disconnected_players()
 {
@@ -67,7 +78,19 @@ void game_state::reset_player_disconnect_timer(sockaddr_storage& store)
     }
 }
 
-void game_state::broadcast(const std::vector<char>& dat, int& to_skip)
+void game_state::set_map(int id)
+{
+    map_num = id;
+
+    respawn_positions.clear();
+
+    for(auto& i : map_namespace::team_list)
+    {
+        respawn_positions.push_back(game_map::get_spawn_positions(i, map_num));
+    }
+}
+
+void game_state::broadcast(const std::vector<char>& dat, const int& to_skip)
 {
     for(int i=0; i<player_list.size(); i++)
     {
@@ -192,11 +215,18 @@ void game_state::tick()
            ktime.elapsed_time_since_started.getElapsedTime().asMicroseconds() / 1000.f > ktime.max_time)
         {
             ///gunna need to do teams later!
-            current_session_state.kills++;
+            //mode_handler.current_session_state.kills++;
+
+            int32_t team = get_team_from_player_id(who_is_reported_dead);
+
+            if(team == 0)
+                mode_handler.current_session_state.team_0_killed++;
+            if(team == 1)
+                mode_handler.current_session_state.team_1_killed++;
 
             it = kill_confirmer.erase(it);
 
-            printf("bring out your dead\n");
+            printf("bring out your dead, member of team %i died\n", team);
         }
         else
         if(ktime.elapsed_time_since_started.getElapsedTime().asMicroseconds() / 1000.f > ktime.max_time)
@@ -214,6 +244,8 @@ void game_state::tick()
         else
             it++;
     }
+
+    mode_handler.tick();
 }
 
 void game_state::process_received_message(byte_fetch& arg, sockaddr_storage& who)
@@ -334,6 +366,68 @@ void game_state::process_join_request(udp_sock& my_server, byte_fetch& fetch, so
     printf("sending ack\n");
 }
 
+void game_state::process_respawn_request(udp_sock& my_server, byte_fetch& fetch, sockaddr_storage& who)
+{
+    int32_t found_end = fetch.get<int32_t>();
+
+    if(found_end != canary_end)
+        return;
+
+    ///THIS IS NOT THE POSITION IN THE PLAYER STRUCTURE
+    int player_id = sockaddr_to_playerid(who);
+
+    int team_id = get_team_from_player_id(player_id);
+
+    vec2f new_pos = find_respawn_position(team_id);
+
+    printf("Got teamid %i\n", team_id);
+
+    ///I could structure this into a forward request
+    ///but that'd be a pain
+    ///unsafe, relying on client to update information to peers
+    ///however, not unreliable, as the client will keep requesting
+    ///a respawn until it gets one, and udp delivered whole
+    ///except freak occurence
+    byte_vector vec;
+    vec.push_back(canary_start);
+    vec.push_back(message::RESPAWNRESPONSE);
+    vec.push_back(new_pos);
+    vec.push_back(canary_end);
+
+    udp_send_to(my_server, vec.ptr, (const sockaddr*)&who);
+}
+
+vec2f game_state::find_respawn_position(int team_id)
+{
+    ///I think I'm going to hate this function
+    std::vector<vec2f>& valid_spawns = respawn_positions[team_id];
+
+    if(valid_spawns.size() == 0)
+    {
+        printf("No valid spawns for this team\n");
+
+        return {-1, -1};
+    }
+
+    if(team_id < 0 || team_id >= valid_spawns.size())
+    {
+        printf("Error, invalid team id with %i\n", team_id);
+
+        return {-2, -2};
+    }
+
+    vec2f my_spawn = valid_spawns.front();
+
+    ///well uuh hi. This erases the first member of the vector
+    ///and pushes it to the back
+    ///this is not exactly ideal from a programming front
+    ///but hopefully this bit of sellotape should work out just fine
+    valid_spawns.erase(valid_spawns.begin());
+    valid_spawns.push_back(my_spawn);
+
+    return my_spawn;
+}
+
 void game_state::balance_teams()
 {
     if(number_of_team(0) == number_of_team(1))
@@ -406,4 +500,71 @@ void game_state::periodic_team_broadcast()
 
         broadcast(vec.ptr, no_player);
     }
+}
+
+void game_state::periodic_gamemode_stats_broadcast()
+{
+    static sf::Clock clk;
+
+    ///once per second
+    float broadcast_every_ms = 1000.f;
+
+    if(clk.getElapsedTime().asMicroseconds() / 1000.f < broadcast_every_ms)
+        return;
+
+    clk.restart();
+
+    byte_vector vec;
+    vec.push_back(canary_start);
+    vec.push_back(message::GAMEMODEUPDATE);
+    vec.push_back(mode_handler.current_game_mode);
+
+    vec.push_back(mode_handler.current_session_state);
+    vec.push_back(mode_handler.current_session_boundaries);
+
+    /*vec.push_back<int32_t>(current_session_state.kills);
+
+    vec.push_back<float>(current_session_boundaries.max_time_ms);
+    vec.push_back<int32_t>(current_session_boundaries.max_kills);*/
+
+    vec.push_back(canary_end);
+
+    broadcast(vec.ptr, -1);
+}
+
+void game_mode_handler::tick()
+{
+    current_session_state.time_elapsed += clk.getElapsedTime().asMicroseconds() / 1000.f;
+    clk.restart();
+
+    if(game_over())
+    {
+        ///just changed
+        if(!in_game_over_state)
+        {
+            game_over_timer.restart();
+
+            printf("Round end\n");
+        }
+
+        in_game_over_state = true;
+    }
+
+    ///we'd need to update all the client positions here
+    if(in_game_over_state && game_over_timer.getElapsedTime().asSeconds() > game_data::game_over_time)
+    {
+        ///reset the session state
+        current_session_state = session_state();
+
+        in_game_over_state = false;
+
+        printf("Round begin\n");
+    }
+}
+
+bool game_mode_handler::game_over()
+{
+    return current_session_state.team_0_killed >= current_session_boundaries.max_kills ||
+            current_session_state.team_1_killed >= current_session_boundaries.max_kills ||
+            current_session_state.time_elapsed >= current_session_boundaries.max_time_ms;
 }

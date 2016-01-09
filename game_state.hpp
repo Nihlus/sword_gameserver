@@ -23,23 +23,6 @@ struct player
     sf::Clock time_since_last_message;
 };
 
-namespace game_data
-{
-    const float round_default = 10; ///10 seconds for testing
-}
-
-struct session_state
-{
-    int32_t kills = 0;
-    sf::Clock time_elapsed;
-};
-
-struct session_boundaries
-{
-    int32_t max_kills = 2;
-    float max_time_ms = 10000.f;
-};
-
 bool operator==(sockaddr_storage& s1, sockaddr_storage& s2);
 
 struct kill_count_timer
@@ -49,21 +32,35 @@ struct kill_count_timer
     const float max_time = 1000.f; ///1s window
 };
 
+struct game_mode_handler
+{
+    sf::Clock clk;
+
+    game_mode_t current_game_mode;
+    session_state current_session_state;
+    session_boundaries current_session_boundaries;
+
+    bool in_game_over_state = false;
+    sf::Clock game_over_timer;
+
+    void tick();
+
+    bool game_over();
+};
+
 ///so the client will send something like
 ///update component playerid componentenum value
 struct game_state
 {
     int max_players = 10;
-    //int num_players = 0;
 
     int map_num = 0; ///????
+    std::vector<std::vector<vec2f>> respawn_positions;
 
     ///we really need to handle this all serverside
     ///which means the server is gunna have to keep track
     ///lets implement a simple kill counter
-    game_mode_t current_game_mode; ///?
-    session_state current_session_state;
-    session_boundaries current_session_boundaries; ///this should really be per gamemode
+    game_mode_handler mode_handler;
 
     ///maps player id who died to kill count structure
     std::map<int32_t, kill_count_timer> kill_confirmer;
@@ -72,11 +69,15 @@ struct game_state
 
     float timeout_time_ms = 5000; ///3 seconds
 
+    ///THIS IS NOT A MAP
+    ///PLAYER IDS ARE NOT POSITIONS IN THIS STRUCTURE
     std::vector<player> player_list;
 
     int number_of_team(int team_id);
 
-    void broadcast(const std::vector<char>& dat, int& to_skip);
+    int32_t get_team_from_player_id(int32_t id);
+
+    void broadcast(const std::vector<char>& dat, const int& to_skip);
     void broadcast(const std::vector<char>& dat, sockaddr_storage& to_skip);
 
     void cull_disconnected_players();
@@ -93,12 +94,17 @@ struct game_state
     void process_received_message(byte_fetch& fetch, sockaddr_storage& who);
     void process_reported_message(byte_fetch& fetch, sockaddr_storage& who);
     void process_join_request(udp_sock& sock, byte_fetch& fetch, sockaddr_storage& who);
+    void process_respawn_request(udp_sock& sock, byte_fetch& fetch, sockaddr_storage& who);
 
     void balance_teams();
+    vec2f find_respawn_position(int team_id);
 
     void periodic_team_broadcast();
+    void periodic_gamemode_stats_broadcast();
 
     void reset_player_disconnect_timer(sockaddr_storage& store);
+
+    void set_map(int);
 };
 
 
