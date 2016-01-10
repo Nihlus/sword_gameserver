@@ -40,6 +40,17 @@ int32_t game_state::get_team_from_player_id(int32_t id)
     return -1;
 }
 
+player game_state::get_player_from_player_id(int32_t id)
+{
+    for(auto& i : player_list)
+    {
+        if(i.id == id)
+            return i;
+    }
+
+    return player();
+}
+
 ///need to heartbeat
 void game_state::cull_disconnected_players()
 {
@@ -246,6 +257,28 @@ void game_state::tick()
     }
 
     mode_handler.tick();
+
+    for(int i=0; i<respawn_requests.size(); i++)
+    {
+        respawn_request& req = respawn_requests[i];
+
+        if(req.clk.getElapsedTime().asMilliseconds() > req.time_to_respawn_ms && !req.respawned)
+        {
+            respawn_player(req.player_id);
+
+            printf("respawning a player with id %i\n", req.player_id);
+
+            req.respawned = true;
+        }
+
+        if(req.clk.getElapsedTime().asMilliseconds() > req.time_to_remove_ms)
+        {
+            printf("Player with id %i can respawn again\n", req.player_id);
+
+            respawn_requests.erase(respawn_requests.begin() + i);
+            i--;
+        }
+    }
 }
 
 void game_state::process_received_message(byte_fetch& arg, sockaddr_storage& who)
@@ -376,7 +409,41 @@ void game_state::process_respawn_request(udp_sock& my_server, byte_fetch& fetch,
     ///THIS IS NOT THE POSITION IN THE PLAYER STRUCTURE
     int player_id = sockaddr_to_playerid(who);
 
+    for(auto& i : respawn_requests)
+    {
+        if(i.player_id == player_id)
+            return;
+    }
+
+    respawn_request req;
+    req.player_id = player_id;
+
+    respawn_requests.push_back(req);
+}
+
+void game_state::respawn_player(int32_t player_id)
+{
     int team_id = get_team_from_player_id(player_id);
+
+    bool found = false;
+
+    player play;
+
+    for(auto& i : player_list)
+    {
+        if(i.id == player_id)
+        {
+            play = i;
+
+            found = true;
+        }
+    }
+
+    if(!found)
+    {
+        printf("No player with id %i\n", player_id);
+        return;
+    }
 
     vec2f new_pos = find_respawn_position(team_id);
 
@@ -394,7 +461,7 @@ void game_state::process_respawn_request(udp_sock& my_server, byte_fetch& fetch,
     vec.push_back(new_pos);
     vec.push_back(canary_end);
 
-    udp_send_to(my_server, vec.ptr, (const sockaddr*)&who);
+    udp_send_to(play.sock, vec.ptr, (const sockaddr*)&play.store);
 }
 
 vec2f game_state::find_respawn_position(int team_id)
@@ -530,6 +597,38 @@ void game_state::periodic_gamemode_stats_broadcast()
     vec.push_back(canary_end);
 
     broadcast(vec.ptr, -1);
+}
+
+void game_state::periodic_respawn_info_update()
+{
+    static sf::Clock clk;
+
+    ///once per second
+    float broadcast_every_ms = 100.f;
+
+    if(clk.getElapsedTime().asMicroseconds() / 1000.f < broadcast_every_ms)
+        return;
+
+    clk.restart();
+
+    for(auto& i : respawn_requests)
+    {
+        player play = get_player_from_player_id(i.player_id);
+
+        if(play.id == -1)
+            continue;
+
+        float time_elapsed = i.clk.getElapsedTime().asMicroseconds() / 1000.f;
+
+        byte_vector vec;
+        vec.push_back(canary_start);
+        vec.push_back(message::RESPAWNINFO);
+        vec.push_back(time_elapsed);
+        vec.push_back(i.time_to_respawn_ms);
+        vec.push_back(canary_end);
+
+        udp_send_to(play.sock, vec.ptr, (const sockaddr*)&play.store);
+    }
 }
 
 void game_mode_handler::tick()

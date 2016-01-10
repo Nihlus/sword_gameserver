@@ -236,14 +236,6 @@ int main(int argc, char* argv[])
                 //printf("client %s:%s\n", get_addr_ip(store).c_str(), get_addr_port(store).c_str());
 
                 my_state.reset_player_disconnect_timer(store);
-
-                /*for(auto& i : my_state.player_list)
-                {
-                    if(i.store == store)
-                    {
-                        i.time_since_last_message.restart();
-                    }
-                }*/
             }
                 ///client pushing data to other clients
         }
@@ -259,6 +251,8 @@ int main(int argc, char* argv[])
         my_state.periodic_team_broadcast();
 
         my_state.periodic_gamemode_stats_broadcast();
+
+        my_state.periodic_respawn_info_update();
 
         my_state.cull_disconnected_players();
     }

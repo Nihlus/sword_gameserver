@@ -9,7 +9,7 @@
 struct player
 {
     //int32_t player_slot = 0;
-    int32_t id = 0; ///per game
+    int32_t id = -1; ///per game
     int32_t team = 0;
 
     ///I don't know if I do want to store these
@@ -48,6 +48,15 @@ struct game_mode_handler
     bool game_over();
 };
 
+struct respawn_request
+{
+    int32_t player_id = 0;
+    sf::Clock clk;
+    float time_to_respawn_ms = 5000;
+    float time_to_remove_ms = 10000; ///the client spams the server. Wait this much more time before they can spawn again
+    bool respawned = false;
+};
+
 ///so the client will send something like
 ///update component playerid componentenum value
 struct game_state
@@ -56,6 +65,8 @@ struct game_state
 
     int map_num = 0; ///????
     std::vector<std::vector<vec2f>> respawn_positions;
+
+    std::vector<respawn_request> respawn_requests;
 
     ///we really need to handle this all serverside
     ///which means the server is gunna have to keep track
@@ -76,6 +87,7 @@ struct game_state
     int number_of_team(int team_id);
 
     int32_t get_team_from_player_id(int32_t id);
+    player get_player_from_player_id(int32_t id);
 
     void broadcast(const std::vector<char>& dat, const int& to_skip);
     void broadcast(const std::vector<char>& dat, sockaddr_storage& to_skip);
@@ -98,9 +110,11 @@ struct game_state
 
     void balance_teams();
     vec2f find_respawn_position(int team_id);
+    void respawn_player(int32_t player_id);
 
     void periodic_team_broadcast();
     void periodic_gamemode_stats_broadcast();
+    void periodic_respawn_info_update();
 
     void reset_player_disconnect_timer(sockaddr_storage& store);
 
