@@ -5,6 +5,7 @@
 #include "game_modes.hpp"
 #include <set>
 #include <map>
+#include "../reliability_shared.hpp"
 
 struct player
 {
@@ -32,6 +33,8 @@ struct kill_count_timer
     const float max_time = 1000.f; ///1s window
 };
 
+struct game_state;
+
 struct game_mode_handler
 {
     sf::Clock clk;
@@ -43,7 +46,7 @@ struct game_mode_handler
     bool in_game_over_state = false;
     sf::Clock game_over_timer;
 
-    void tick();
+    void tick(game_state* state);
 
     bool game_over();
 };
@@ -57,10 +60,29 @@ struct respawn_request
     bool respawned = false;
 };
 
+struct game_state;
+
+struct server_reliability_manager
+{
+    std::map<int32_t, reliability_manager> player_reliability_handler;
+
+    void tick(game_state* state);
+
+    void add(byte_vector& vec, int32_t to_skip);
+    void add_packetid_to_ack(uint32_t id, int32_t to_whom);
+
+    void add_player(int32_t id);
+    void remove_player(int32_t id);
+
+    void process_ack(byte_fetch& fetch);
+};
+
 ///so the client will send something like
 ///update component playerid componentenum value
 struct game_state
 {
+    server_reliability_manager reliable;
+
     int max_players = 10;
 
     int map_num = 0; ///????
@@ -111,6 +133,7 @@ struct game_state
     void balance_teams();
     vec2f find_respawn_position(int team_id);
     void respawn_player(int32_t player_id);
+    void respawn_all();
 
     void periodic_team_broadcast();
     void periodic_gamemode_stats_broadcast();

@@ -1,6 +1,83 @@
 #include "game_state.hpp"
 #include "../master_server/network_messages.hpp"
 
+void server_reliability_manager::tick(game_state* state)
+{
+    const float broadcast_time_ms = 16;
+
+    static sf::Clock clk;
+
+    //if(clk.getElapsedTime().asMilliseconds() < broadcast_time_ms)
+    //    return;
+
+    clk.restart();
+
+    for(auto& i : player_reliability_handler)
+    {
+        int32_t id = i.first;
+
+        player play = state->get_player_from_player_id(id);
+
+        i.second.tick(play.sock, play.store);
+    }
+}
+
+void server_reliability_manager::add(byte_vector& vec, int32_t to_skip)
+{
+    for(auto& i : player_reliability_handler)
+    {
+        if(i.first == to_skip)
+            continue;
+
+        i.second.add(vec);
+    }
+}
+
+void server_reliability_manager::add_player(int32_t id)
+{
+    player_reliability_handler[id];
+}
+
+void server_reliability_manager::remove_player(int32_t id)
+{
+    for(auto it = player_reliability_handler.begin(); it != player_reliability_handler.end();)
+    {
+        if(it->first == id)
+        {
+            it = player_reliability_handler.erase(it);
+        }
+        else
+            ++it;
+    }
+}
+
+void server_reliability_manager::process_ack(byte_fetch& fetch)
+{
+    for(auto& i : player_reliability_handler)
+    {
+        byte_fetch arg = fetch;
+
+        i.second.process_forwarding_reliable_ack(arg);
+    }
+
+    ///id
+    fetch.get<int32_t>();
+    ///canary
+    fetch.get<int32_t>();
+}
+
+void server_reliability_manager::add_packetid_to_ack(uint32_t reliable_id, int32_t player_id)
+{
+    for(auto& i : player_reliability_handler)
+    {
+        if(i.first == player_id)
+        {
+            i.second.register_ack_forwarding_reliable(reliable_id);
+            return;
+        }
+    }
+}
+
 void game_state::add_player(udp_sock& sock, sockaddr_storage store)
 {
     int id = gid++;
@@ -14,6 +91,8 @@ void game_state::add_player(udp_sock& sock, sockaddr_storage store)
     play.store = store;
 
     player_list.push_back(play);
+
+    reliable.add_player(id);
 }
 
 int game_state::number_of_team(int team_id)
@@ -59,6 +138,8 @@ void game_state::cull_disconnected_players()
         if(player_list[i].time_since_last_message.getElapsedTime().asMicroseconds() / 1000.f > timeout_time_ms)
         {
             printf("Player timeout\n");// %s:%s\n", get_peer_ip(player_list[i]].store))
+
+            reliable.remove_player(player_list[i].id);
 
             player_list.erase(player_list.begin() + i);
             i--;
@@ -256,7 +337,7 @@ void game_state::tick()
             it++;
     }
 
-    mode_handler.tick();
+    mode_handler.tick(this);
 
     for(int i=0; i<respawn_requests.size(); i++)
     {
@@ -589,11 +670,6 @@ void game_state::periodic_gamemode_stats_broadcast()
     vec.push_back(mode_handler.current_session_state);
     vec.push_back(mode_handler.current_session_boundaries);
 
-    /*vec.push_back<int32_t>(current_session_state.kills);
-
-    vec.push_back<float>(current_session_boundaries.max_time_ms);
-    vec.push_back<int32_t>(current_session_boundaries.max_kills);*/
-
     vec.push_back(canary_end);
 
     broadcast(vec.ptr, -1);
@@ -631,7 +707,7 @@ void game_state::periodic_respawn_info_update()
     }
 }
 
-void game_mode_handler::tick()
+void game_mode_handler::tick(game_state* state)
 {
     current_session_state.time_elapsed += clk.getElapsedTime().asMicroseconds() / 1000.f;
     clk.restart();
@@ -656,6 +732,8 @@ void game_mode_handler::tick()
         current_session_state = session_state();
 
         in_game_over_state = false;
+
+        state->respawn_requests.clear();
 
         printf("Round begin\n");
     }

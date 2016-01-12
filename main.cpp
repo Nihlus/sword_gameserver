@@ -6,6 +6,8 @@
 #include <vec/vec.hpp>
 #include "game_state.hpp"
 
+#include <cl/cl.h>
+
 ///The code duplication and poor organisation is unreal. We need a cleanup :[
 void tcp_periodic_connect(tcp_sock& sock, const std::string& address)
 {
@@ -82,6 +84,17 @@ int main(int argc, char* argv[])
 
     my_state.set_map(0);
 
+    byte_vector test;
+    //test.push_back(canary_start);
+    //test.push_back(message::FORWARDING);
+    test.push_back<int32_t>(0);
+    test.push_back<int32_t>(0);
+    test.push_back<int32_t>(sizeof(cl_float4));
+    test.push_back<cl_float4>({0,0,0});
+    //test.push_back(canary_end);
+
+    bool once = false;
+
     bool going = true;
 
     while(going)
@@ -119,72 +132,6 @@ int main(int argc, char* argv[])
 
             continue;
         }
-
-        /*tcp_sock new_fd = conditional_accept(my_server);
-
-        if(new_fd.valid())
-        {
-            sockets.push_back(new_fd);
-        }*/
-
-        ///from here on, the code is totally untested
-        /*for(int i=0; i<sockets.size(); i++)
-        {
-            tcp_sock fd = sockets[i];
-
-            if(sock_readable(fd))
-            {
-                auto data = tcp_recv(fd);
-
-                if(fd.invalid())
-                {
-                    sockets.erase(sockets.begin() + i);
-                    i--;
-                    continue;
-                }
-
-                byte_fetch fetch;
-                fetch.ptr.swap(data);
-
-                while(!fetch.finished())
-                {
-                    int32_t found_canary = fetch.get<int32_t>();
-
-                    while(found_canary != canary_start && !fetch.finished())
-                    {
-                        found_canary = fetch.get<int32_t>();
-                    }
-
-                    int32_t type = fetch.get<int32_t>();
-
-                    if(type == message::CLIENTJOINREQUEST)
-                    {
-                        int32_t found_end = fetch.get<int32_t>();
-
-                        if(found_end != canary_end)
-                            continue;
-
-                        my_state.add_player(fd);
-                        ///really need to pipe back player id
-
-                        byte_vector vec;
-                        vec.push_back(canary_start);
-                        vec.push_back(message::CLIENTJOINACK);
-                        vec.push_back<int32_t>(my_state.player_list.back().id);
-                        vec.push_back(canary_end);
-
-                        tcp_send(fd, vec.ptr);
-
-                        printf("sending ack\n");
-
-                        sockets.erase(sockets.begin() + i);
-                        i--;
-                        continue;
-                    }
-                }
-                ///client pushing data to other clients
-            }
-        }*/
 
         bool any_read = true;
 
@@ -228,9 +175,36 @@ int main(int argc, char* argv[])
                 {
                     my_state.process_respawn_request(my_server, fetch, store);
                 }
+                else if(type == message::FORWARDING_RELIABLE)
+                {
+                    int32_t player_id = my_state.sockaddr_to_playerid(store);
+
+                    uint32_t reliable_id = -1;
+
+                    byte_vector vec = reliability_manager::strip_data_from_forwarding_reliable(fetch, reliable_id);
+
+                    ///don't want to replicate it back to the player, do we!
+                    ///we're calling add, but add sticks on canaries
+                    ///really we want to strip down the message
+                    my_state.reliable.add(vec, player_id);
+                    my_state.reliable.add_packetid_to_ack(reliable_id, player_id);
+                }
+                else if(type == message::FORWARDING_RELIABLE_ACK)
+                {
+                    my_state.reliable.process_ack(fetch);
+                }
                 else
                 {
                     printf("err %i ", type);
+                }
+
+                if(!once && my_state.gid == 2)
+                {
+                    printf("pied piping\n");
+
+                    //my_state.reliable.add(test, -1);
+
+                    once = true;
                 }
 
                 //printf("client %s:%s\n", get_addr_ip(store).c_str(), get_addr_port(store).c_str());
@@ -255,5 +229,7 @@ int main(int argc, char* argv[])
         my_state.periodic_respawn_info_update();
 
         my_state.cull_disconnected_players();
+
+        //my_state.reliable.tick(&my_state);
     }
 }
