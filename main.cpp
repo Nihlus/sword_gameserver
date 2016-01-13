@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
             {
                 ///resets sock info
                 inf.retry();
-                inf = try_tcp_connect("127.0.0.1", MASTER_PORT);
+                inf = try_tcp_connect(MASTER_IP, MASTER_PORT);
 
                 printf("trying\n");
             }
@@ -186,7 +186,12 @@ int main(int argc, char* argv[])
                     ///don't want to replicate it back to the player, do we!
                     ///we're calling add, but add sticks on canaries
                     ///really we want to strip down the message
-                    my_state.reliable.add(vec, player_id);
+
+                    ///so uuh. this is instructing the server to just repeatdly forward
+                    ///the message to the client
+                    ///whereas obviously we want to check if they've already got it
+                    ///I'm not smart
+                    my_state.reliable.add(vec, player_id, reliable_id);
                     my_state.reliable.add_packetid_to_ack(reliable_id, player_id);
                 }
                 else if(type == message::FORWARDING_RELIABLE_ACK)
@@ -198,7 +203,7 @@ int main(int argc, char* argv[])
                     printf("err %i ", type);
                 }
 
-                if(!once && my_state.gid == 2)
+                if(!once && my_state.gid == 3)
                 {
                     printf("pied piping\n");
 
@@ -230,6 +235,6 @@ int main(int argc, char* argv[])
 
         my_state.cull_disconnected_players();
 
-        //my_state.reliable.tick(&my_state);
+        my_state.reliable.tick(&my_state);
     }
 }

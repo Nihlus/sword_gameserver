@@ -3,12 +3,12 @@
 
 void server_reliability_manager::tick(game_state* state)
 {
-    const float broadcast_time_ms = 16;
+    const float broadcast_time_ms = 4;
 
     static sf::Clock clk;
 
-    //if(clk.getElapsedTime().asMilliseconds() < broadcast_time_ms)
-    //    return;
+    if(clk.getElapsedTime().asMilliseconds() < broadcast_time_ms)
+        return;
 
     clk.restart();
 
@@ -22,14 +22,14 @@ void server_reliability_manager::tick(game_state* state)
     }
 }
 
-void server_reliability_manager::add(byte_vector& vec, int32_t to_skip)
+void server_reliability_manager::add(byte_vector& vec, int32_t to_skip, uint32_t reliable_id)
 {
     for(auto& i : player_reliability_handler)
     {
         if(i.first == to_skip)
             continue;
 
-        i.second.add(vec);
+        i.second.add(vec, reliable_id);
     }
 }
 

@@ -68,7 +68,7 @@ struct server_reliability_manager
 
     void tick(game_state* state);
 
-    void add(byte_vector& vec, int32_t to_skip);
+    void add(byte_vector& vec, int32_t to_skip, uint32_t reliable_id);
     void add_packetid_to_ack(uint32_t id, int32_t to_whom);
 
     void add_player(int32_t id);
