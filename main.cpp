@@ -203,14 +203,14 @@ int main(int argc, char* argv[])
                     printf("err %i ", type);
                 }
 
-                if(!once && my_state.gid == 3)
+                /*if(!once && my_state.gid == 3)
                 {
                     printf("pied piping\n");
 
                     //my_state.reliable.add(test, -1);
 
                     once = true;
-                }
+                }*/
 
                 //printf("client %s:%s\n", get_addr_ip(store).c_str(), get_addr_port(store).c_str());
 

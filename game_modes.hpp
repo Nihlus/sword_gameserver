@@ -21,13 +21,19 @@ namespace game_mode
     };
 }
 
+#define TEAM_NUMS 3
+
 typedef game_mode::game_mode game_mode_t;
 
 struct session_state
 {
     //int32_t kills = 0;
-    int32_t team_0_killed = 0;
-    int32_t team_1_killed = 0;
+    //int32_t team_0_killed = 0;
+    //int32_t team_1_killed = 0;
+
+    int32_t team_killed[TEAM_NUMS]; ///how many died on this team
+    int32_t team_kills[TEAM_NUMS]; ///how many this team has killed
+
     float time_elapsed = 0; ///if i make you a float, i can just pipe these structures directly
 };
 
@@ -49,13 +55,15 @@ namespace map_namespace
     enum spawn_defs : int
     {
         R = -1 << 16,
-        B = -1 << 17
+        B = -1 << 17,
+        G = -1 << 18  //GOLD
     };
 
     static std::vector<spawn_defs> team_list
     {
         R,
-        B
+        B,
+        G
     };
 
     /*static std::vector<int>

@@ -100,7 +100,7 @@ struct game_state
 
     int gid = 0;
 
-    float timeout_time_ms = 5000; ///3 seconds
+    float timeout_time_ms = 10000;
 
     ///THIS IS NOT A MAP
     ///PLAYER IDS ARE NOT POSITIONS IN THIS STRUCTURE

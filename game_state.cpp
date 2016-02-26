@@ -311,10 +311,18 @@ void game_state::tick()
 
             int32_t team = get_team_from_player_id(who_is_reported_dead);
 
-            if(team == 0)
+            /*if(team == 0)
                 mode_handler.current_session_state.team_0_killed++;
             if(team == 1)
-                mode_handler.current_session_state.team_1_killed++;
+                mode_handler.current_session_state.team_1_killed++;*/
+
+            if(team >= TEAM_NUMS)
+            {
+                printf("team error in server\n");
+                continue;
+            }
+
+            mode_handler.current_session_state.team_killed[team]++;
 
             it = kill_confirmer.erase(it);
 
@@ -741,7 +749,19 @@ void game_mode_handler::tick(game_state* state)
 
 bool game_mode_handler::game_over()
 {
-    return current_session_state.team_0_killed >= current_session_boundaries.max_kills ||
+    /*return current_session_state.team_0_killed >= current_session_boundaries.max_kills ||
             current_session_state.team_1_killed >= current_session_boundaries.max_kills ||
-            current_session_state.time_elapsed >= current_session_boundaries.max_time_ms;
+            current_session_state.time_elapsed >= current_session_boundaries.max_time_ms;*/
+
+    for(int i=0; i<TEAM_NUMS; i++)
+    {
+        ///WARNING, THIS SHOULD BE TEAM KILLS
+        if(current_session_state.team_kills[i] >= current_session_boundaries.max_kills)
+            return true;
+    }
+
+    if(current_session_state.time_elapsed >= current_session_boundaries.max_time_ms)
+        return true;
+
+    return false;
 }
