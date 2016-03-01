@@ -311,22 +311,44 @@ void game_state::tick()
 
             int32_t team = get_team_from_player_id(who_is_reported_dead);
 
-            /*if(team == 0)
-                mode_handler.current_session_state.team_0_killed++;
-            if(team == 1)
-                mode_handler.current_session_state.team_1_killed++;*/
-
             if(team >= TEAM_NUMS)
             {
                 printf("team error in server\n");
                 continue;
             }
 
+            int32_t player_who_killed_them = -1;
+
+            for(auto& i : ktime.player_id_of_reported_killer)
+            {
+                if(i.second >= players_needed_to_confirm_kill)
+                {
+                    player_who_killed_them = i.first;
+                }
+            }
+
+            if(player_who_killed_them == -1)
+            {
+                printf("no player id could be reliably found who killed player with id %i\n", who_is_reported_dead);
+            }
+
+            int32_t killer_team = get_team_from_player_id(player_who_killed_them);
+
+            if(killer_team >= TEAM_NUMS)
+            {
+                printf("invalid team for killer\n");
+            }
+
             mode_handler.current_session_state.team_killed[team]++;
+
+            if(killer_team >= 0 && killer_team < TEAM_NUMS)
+                mode_handler.current_session_state.team_kills[killer_team]++;
 
             it = kill_confirmer.erase(it);
 
-            printf("bring out your dead, member of team %i died\n", team);
+            //printf("bring out your dead, member of team %i died\n", team);
+            printf("Team %i killed member of team %i\n", killer_team, team);
+            printf("playerid %i killed playerid %i\n", who_is_reported_dead, player_who_killed_them);
         }
         else
         if(ktime.elapsed_time_since_started.getElapsedTime().asMicroseconds() / 1000.f > ktime.max_time)
@@ -451,11 +473,25 @@ void game_state::process_reported_message(byte_fetch& arg, sockaddr_storage& who
 
     if(report_type == (int32_t)report::DEATH)
     {
+        if(dat.size() < sizeof(int32_t))
+        {
+            printf("Err, invalid death report\n");
+            return;
+        }
+
+        int32_t player_who_killed_them = *(int32_t*)&dat[0];
+
         kill_count_timer& killcount = kill_confirmer[player_id];
 
         int32_t who_sent_message = sockaddr_to_playerid(who);
 
         killcount.player_ids_reported_deaths.insert(who_sent_message);
+        killcount.player_id_of_reported_killer[player_who_killed_them]++;
+
+        if(player_who_killed_them == -1)
+        {
+            printf("warning, bad player who killed them id = -1\n");
+        }
 
         printf("Kill reported\n");
     }
