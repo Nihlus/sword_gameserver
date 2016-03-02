@@ -180,6 +180,18 @@ void game_state::set_map(int id)
     {
         respawn_positions.push_back(game_map::get_spawn_positions(i, map_num));
     }
+
+    if(respawn_positions.size() < TEAM_NUMS)
+    {
+        int old_size = respawn_positions.size();
+
+        for(int i=respawn_positions.size(); i<TEAM_NUMS; i++)
+        {
+            int id = i % old_size;
+
+            respawn_positions.push_back(respawn_positions[id]);
+        }
+    }
 }
 
 void game_state::broadcast(const std::vector<char>& dat, const int& to_skip)
@@ -591,6 +603,13 @@ void game_state::respawn_player(int32_t player_id)
 
 vec2f game_state::find_respawn_position(int team_id)
 {
+    if(respawn_positions.size() <= team_id)
+    {
+        printf("Respawn_positions too small, returning default spawn\n");
+
+        return {-3, -3};
+    }
+
     ///I think I'm going to hate this function
     std::vector<vec2f>& valid_spawns = respawn_positions[team_id];
 
@@ -620,28 +639,28 @@ vec2f game_state::find_respawn_position(int team_id)
     return my_spawn;
 }
 
-void game_state::balance_teams()
+void balance_first_to_x(game_state& state)
 {
-    if(number_of_team(0) == number_of_team(1))
+    if(state.number_of_team(0) == state.number_of_team(1))
         return;
 
     ///odd number of players, rest in peace
-    if(abs(number_of_team(1) - number_of_team(0)) == 1)
+    if(abs(state.number_of_team(1) - state.number_of_team(0)) == 1)
         return;
 
-    int t0 = number_of_team(0);
-    int t1 = number_of_team(1);
+    int t0 = state.number_of_team(0);
+    int t1 = state.number_of_team(1);
 
     int team_to_swap = t1 > t0 ? 1 : 0;
     int team_to_swap_to = t1 < t0 ? 1 : 0;
 
-    int extra = abs(number_of_team(1) - number_of_team(0));
+    int extra = abs(state.number_of_team(1) - state.number_of_team(0));
 
     int num_to_swap = extra / 2;
 
     int num_swapped = 0;
 
-    for(auto& i : player_list)
+    for(auto& i : state.player_list)
     {
         if(i.team == team_to_swap && num_swapped < num_to_swap)
         {
@@ -659,11 +678,70 @@ void game_state::balance_teams()
 
             int no_player = -1;
 
-            broadcast(vec.ptr, no_player);
+            state.broadcast(vec.ptr, no_player);
 
             num_swapped++;
         }
     }
+}
+
+///well, more of an iterative balance. Should probably make it properly fully balance
+void balance_ffa(game_state& state)
+{
+    int number_of_players = state.player_list.size();
+
+    int max_players_per_team = (number_of_players / TEAM_NUMS) + 1;
+
+    std::vector<int32_t> too_big_teams;
+    too_big_teams.resize(TEAM_NUMS);
+
+    for(int i=0; i<TEAM_NUMS; i++)
+    {
+        if(state.number_of_team(i) > max_players_per_team)
+        {
+            /*int32_t next_team = (i+1) % TEAM_NUMS;
+
+            byte_vector vec;
+
+            vec.push_back(canary_start);
+            vec.push_back(message::TEAMASSIGNMENT);
+            vec.push_back<int32_t>()*/
+
+            too_big_teams[i] = 1;
+        }
+    }
+
+    for(auto& i : state.player_list)
+    {
+        if(too_big_teams[i.team] == 1)
+        {
+            int old_team = i.team;
+
+            i.team = (i.team + 1) % TEAM_NUMS;
+
+            byte_vector vec;
+            vec.push_back(canary_start);
+            vec.push_back(message::TEAMASSIGNMENT);
+            vec.push_back<int32_t>(i.id);
+            vec.push_back<int32_t>(i.team);
+            vec.push_back(canary_end);
+
+            int no_player = -1;
+
+            state.broadcast(vec.ptr, no_player);
+
+            too_big_teams[old_team] = 0;
+        }
+    }
+}
+
+void game_state::balance_teams()
+{
+    if(mode_handler.current_game_mode == game_mode::FIRST_TO_X)
+        return balance_first_to_x(*this);
+
+    if(mode_handler.current_game_mode == game_mode::FFA)
+        return balance_ffa(*this);
 }
 
 void game_state::periodic_team_broadcast()

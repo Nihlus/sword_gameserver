@@ -10,6 +10,7 @@ namespace game_mode
     enum game_mode : int32_t
     {
         FIRST_TO_X,
+        FFA,
         ///the man with the golden sword, and in fact outfit entirely
         COUNT
     };
@@ -57,15 +58,15 @@ namespace map_namespace
     enum spawn_defs : int
     {
         R = -1 << 16,
-        B = -1 << 17,
-        G = -1 << 18  //GOLD
+        B = -1 << 17//,
+        //G = -1 << 18  //GOLD
     };
 
     static std::vector<spawn_defs> team_list
     {
         R,
-        B,
-        G
+        B//,
+        //G
     };
 
     /*static std::vector<int>

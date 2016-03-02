@@ -56,6 +56,7 @@
 		</Linker>
 		<Unit filename="../reliability_shared.cpp" />
 		<Unit filename="../reliability_shared.hpp" />
+		<Unit filename="game_modes.cpp" />
 		<Unit filename="game_modes.hpp" />
 		<Unit filename="game_state.cpp" />
 		<Unit filename="game_state.hpp" />

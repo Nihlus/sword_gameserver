@@ -81,6 +81,7 @@ int main(int argc, char* argv[])
     //std::vector<sockaddr_store> store_sock;
 
     game_state my_state;
+    my_state.mode_handler.current_game_mode = game_mode::FFA;
 
     my_state.set_map(0);
 

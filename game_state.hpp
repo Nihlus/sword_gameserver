@@ -41,7 +41,7 @@ struct game_mode_handler
 {
     sf::Clock clk;
 
-    game_mode_t current_game_mode;
+    game_mode_t current_game_mode = game_mode::FIRST_TO_X;
     session_state current_session_state;
     session_boundaries current_session_boundaries;
 
