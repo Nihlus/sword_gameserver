@@ -25,20 +25,6 @@ namespace game_mode
 
 typedef game_mode::game_mode game_mode_t;
 
-struct session_state
-{
-    //int32_t kills = 0;
-    //int32_t team_0_killed = 0;
-    //int32_t team_1_killed = 0;
-
-    int32_t team_killed[TEAM_NUMS] = {0}; ///how many died on this team
-    int32_t team_kills[TEAM_NUMS] = {0}; ///how many this team has killed
-
-    float time_elapsed = 0; ///if i make you a float, i can just pipe these structures directly
-
-    ///implement gamemode functions here, with session_boundaries
-};
-
 namespace game_data
 {
     const float kills_to_win = 40;
@@ -50,6 +36,20 @@ struct session_boundaries
 {
     int32_t max_kills = game_data::kills_to_win;
     float max_time_ms = game_data::round_default * 1000.f;
+};
+
+struct session_state
+{
+    int32_t team_killed[TEAM_NUMS] = {0}; ///how many died on this team
+    int32_t team_kills[TEAM_NUMS] = {0}; ///how many this team has killed
+
+    float time_elapsed = 0; ///if i make you a float, i can just pipe these structures directly
+
+    ///implement gamemode functions here, with session_boundaries
+
+    bool game_over(const session_boundaries& bounds);
+    std::string get_game_over_string(const session_boundaries& bounds);
+    std::string get_current_game_state_string(const session_boundaries& bounds);
 };
 
 namespace map_namespace

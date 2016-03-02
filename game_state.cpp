@@ -789,7 +789,7 @@ bool game_mode_handler::game_over()
             current_session_state.team_1_killed >= current_session_boundaries.max_kills ||
             current_session_state.time_elapsed >= current_session_boundaries.max_time_ms;*/
 
-    for(int i=0; i<TEAM_NUMS; i++)
+    /*for(int i=0; i<TEAM_NUMS; i++)
     {
         ///WARNING, THIS SHOULD BE TEAM KILLS
         if(current_session_state.team_kills[i] >= current_session_boundaries.max_kills)
@@ -799,5 +799,7 @@ bool game_mode_handler::game_over()
     if(current_session_state.time_elapsed >= current_session_boundaries.max_time_ms)
         return true;
 
-    return false;
+    return false;*/
+
+    return current_session_state.game_over(current_session_boundaries);
 }
