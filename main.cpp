@@ -131,7 +131,7 @@ int main(int argc, char* argv[])
                 printf("found master server\n");
             }
 
-            continue;
+            //continue;
         }
 
         bool any_read = true;
