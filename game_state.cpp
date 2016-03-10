@@ -130,6 +130,18 @@ player game_state::get_player_from_player_id(int32_t id)
     return player();
 }
 
+int32_t game_state::get_pos_from_player_id(int32_t id)
+{
+    //for(auto& i : player_list)
+    for(int i=0; i<player_list.size(); i++)
+    {
+        if(player_list[i].id == id)
+            return i;
+    }
+
+    return -1;
+}
+
 ///need to heartbeat
 void game_state::cull_disconnected_players()
 {
@@ -569,17 +581,25 @@ void game_state::process_ping_response(udp_sock& my_server, byte_fetch& fetch, s
 
     if(player_id < 0)
     {
-        printf("Invalid player id %i\n", player_id);
+        printf("Invalid player id less 0 %i\n", player_id);
         return;
     }
 
-    if(player_id >= player_list.size())
+    /*if(player_id >= player_list.size())
     {
-        printf("Invalid player id %i\n", player_id);
+        printf("Invalid player id gr list size %i\n", player_id);
+        return;
+    }*/
+
+    int32_t arr_pos = get_pos_from_player_id(player_id);
+
+    if(arr_pos < 0)
+    {
+        printf("Invalid arr pos less 0 %i\n", arr_pos);
         return;
     }
 
-    player& play = player_list[player_id];
+    player& play = player_list[arr_pos];
 
     float ctime = running_time.getElapsedTime().asMicroseconds() / 1000.f;
 

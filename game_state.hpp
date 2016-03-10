@@ -128,6 +128,7 @@ struct game_state
 
     int32_t get_team_from_player_id(int32_t id);
     player get_player_from_player_id(int32_t id);
+    int32_t get_pos_from_player_id(int32_t id);
 
     void broadcast(const std::vector<char>& dat, const int& to_skip);
     void broadcast(const std::vector<char>& dat, sockaddr_storage& to_skip);
