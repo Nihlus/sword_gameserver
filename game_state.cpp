@@ -824,14 +824,6 @@ void balance_ffa(game_state& state)
     {
         if(state.number_of_team(i) > max_players_per_team)
         {
-            /*int32_t next_team = (i+1) % TEAM_NUMS;
-
-            byte_vector vec;
-
-            vec.push_back(canary_start);
-            vec.push_back(message::TEAMASSIGNMENT);
-            vec.push_back<int32_t>()*/
-
             too_big_teams[i] = 1;
         }
     }
@@ -855,7 +847,8 @@ void balance_ffa(game_state& state)
 
             state.broadcast(vec.ptr, no_player);
 
-            too_big_teams[old_team] = 0;
+            if(old_team >= 0 && old_team < too_big_teams.size())
+                too_big_teams[old_team] = 0;
         }
     }
 }
