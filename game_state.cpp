@@ -575,12 +575,17 @@ void game_state::process_ping_response(udp_sock& my_server, byte_fetch& fetch, s
 
     player& play = player_list[player_id];
 
-    play.ping_ms = play.clk.getElapsedTime().asMicroseconds() / 1000.f;
+    float ctime = running_time.getElapsedTime().asMicroseconds() / 1000.f;
 
-    if(play.ping_ms > play.max_ping)
-        play.ping_ms = play.max_ping;
+    play.ping_ms = ctime - last_time_ms;
 
-    printf("Ping %f\n", play.ping_ms);
+    //if(play.ping_ms > play.max_ping_ms)
+    //    play.ping_ms = play.max_ping_ms;
+
+    printf("Ping %f %i\n", play.ping_ms, play.id);
+
+    //printf("running time %f\n", ctime);
+    //printf("last time %f\n", last_time_ms);
 }
 
 ///ok, the server can store everyone's pings and then distribute to clients
@@ -588,8 +593,10 @@ void game_state::process_ping_response(udp_sock& my_server, byte_fetch& fetch, s
 
 void game_state::ping()
 {
-    for(auto& i : player_list)
-        i.clk.restart();
+    //for(auto& i : player_list)
+    //    i.clk.restart();
+
+    last_time_ms = running_time.getElapsedTime().asMicroseconds() / 1000.f;
 
     byte_vector vec;
     vec.push_back(canary_start);
@@ -599,6 +606,8 @@ void game_state::ping()
     int none = -1;
 
     broadcast(vec.ptr, none);
+
+    //printf("running time2 %f\n", last_time_ms);
 
     //printf("sping\n");
 }

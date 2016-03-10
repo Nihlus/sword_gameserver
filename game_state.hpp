@@ -12,10 +12,10 @@ struct player
     //int32_t player_slot = 0;
     int32_t id = -1; ///per game
     int32_t team = 0;
-    int32_t ping_ms = 150;
 
+    float ping_ms = 150;
     sf::Clock clk;
-    int32_t max_ping = 250;
+    float max_ping_ms = 250;
 
     ///I don't know if I do want to store these
     ///I could carry on using the existing broadcast system
@@ -110,6 +110,8 @@ struct game_state
     float timeout_time_ms = 10000;
     float ping_interval_ms = 1000;
     sf::Clock ping_interval_clk;
+    float last_time_ms = 0;
+    sf::Clock running_time;
 
     ///THIS IS NOT A MAP
     ///PLAYER IDS ARE NOT POSITIONS IN THIS STRUCTURE
