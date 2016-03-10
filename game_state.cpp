@@ -838,7 +838,7 @@ void balance_ffa(game_state& state)
 
     for(auto& i : state.player_list)
     {
-        if(too_big_teams[i.team] == 1)
+        if(i.team < 0 || i.team >= too_big_teams.size() || too_big_teams[i.team] == 1)
         {
             int old_team = i.team;
 
