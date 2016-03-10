@@ -22,7 +22,7 @@
 				<Option type="1" />
 				<Option compiler="mingw64" />
 				<Compiler>
-					<Add option="-O2" />
+					<Add option="-O3" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
@@ -54,6 +54,7 @@
 			<Add option="-lopenal32" />
 			<Add option="-logg" />
 		</Linker>
+		<Unit filename="../../openclrenderer/logging.cpp" />
 		<Unit filename="../reliability_shared.cpp" />
 		<Unit filename="../reliability_shared.hpp" />
 		<Unit filename="game_modes.cpp" />

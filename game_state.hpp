@@ -12,6 +12,10 @@ struct player
     //int32_t player_slot = 0;
     int32_t id = -1; ///per game
     int32_t team = 0;
+    int32_t ping_ms = 150;
+
+    sf::Clock clk;
+    int32_t max_ping = 250;
 
     ///I don't know if I do want to store these
     ///I could carry on using the existing broadcast system
@@ -81,6 +85,7 @@ struct server_reliability_manager
 
 ///so the client will send something like
 ///update component playerid componentenum value
+///uuh. this is really a networking class?
 struct game_state
 {
     server_reliability_manager reliable;
@@ -103,6 +108,8 @@ struct game_state
     int gid = 0;
 
     float timeout_time_ms = 10000;
+    float ping_interval_ms = 1000;
+    sf::Clock ping_interval_clk;
 
     ///THIS IS NOT A MAP
     ///PLAYER IDS ARE NOT POSITIONS IN THIS STRUCTURE
@@ -131,6 +138,10 @@ struct game_state
     void process_reported_message(byte_fetch& fetch, sockaddr_storage& who);
     void process_join_request(udp_sock& sock, byte_fetch& fetch, sockaddr_storage& who);
     void process_respawn_request(udp_sock& sock, byte_fetch& fetch, sockaddr_storage& who);
+    //void process_ping_and_forward(udp_sock& sock, byte_fetch& fetch, sockaddr_storage& who);
+    void process_ping_response(udp_sock& sock, byte_fetch& fetch, sockaddr_storage& who);
+
+    void ping();
 
     void balance_teams();
     vec2f find_respawn_position(int team_id);

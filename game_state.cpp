@@ -558,6 +558,86 @@ void game_state::process_respawn_request(udp_sock& my_server, byte_fetch& fetch,
     respawn_requests.push_back(req);
 }
 
+void game_state::process_ping_response(udp_sock& my_server, byte_fetch& fetch, sockaddr_storage& who)
+{
+    int32_t found_end = fetch.get<int32_t>();
+
+    if(found_end != canary_end)
+        return;
+
+    int32_t player_id = sockaddr_to_playerid(who);
+
+    if(player_id < 0)
+    {
+        printf("Invalid player id %i\n", player_id);
+        return;
+    }
+
+    player& play = player_list[player_id];
+
+    play.ping_ms = play.clk.getElapsedTime().asMicroseconds() / 1000.f;
+
+    if(play.ping_ms > play.max_ping)
+        play.ping_ms = play.max_ping;
+
+    printf("Ping %f\n", play.ping_ms);
+}
+
+///ok, the server can store everyone's pings and then distribute to clients
+///really we should be sending out timestamps with all the updates, and then use that :[
+
+void game_state::ping()
+{
+    for(auto& i : player_list)
+        i.clk.restart();
+
+    byte_vector vec;
+    vec.push_back(canary_start);
+    vec.push_back(message::PING);
+    vec.push_back(canary_end);
+
+    int none = -1;
+
+    broadcast(vec.ptr, none);
+
+    //printf("sping\n");
+}
+
+///oh dear. Ping doesn't want to be a global thing :[
+/*void game_state::process_ping_and_forward(udp_sock& my_server, byte_fetch& fetch, sockaddr_storage& who)
+{
+    int32_t found_end = fetch.get<int32_t>();
+
+    if(found_end != canary_end)
+        return;
+
+    byte_vector vec;
+    vec.push_back(canary_start);
+    vec.push_back(message::PING);
+    vec.push_back(canary_end);
+
+    int none = -1;
+
+    broadcast(vec.ptr, none);
+}
+
+void game_state::process_ping_response_and_forward(udp_sock& my_server, byte_fetch& fetch, sockaddr_storage& who)
+{
+    int32_t found_end = fetch.get<int32_t>();
+
+    if(found_end != canary_end)
+        return;
+
+    byte_vector vec;
+    vec.push_back(canary_start);
+    vec.push_back(message::PING);
+    vec.push_back(canary_end);
+
+    int none = -1;
+
+    broadcast(vec.ptr, none);
+}*/
+
 void game_state::respawn_player(int32_t player_id)
 {
     int team_id = get_team_from_player_id(player_id);

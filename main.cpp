@@ -199,6 +199,10 @@ int main(int argc, char* argv[])
                 {
                     my_state.reliable.process_ack(fetch);
                 }
+                else if(type == message::PING_RESPONSE)
+                {
+                    my_state.process_ping_response(my_server, fetch, store);
+                }
                 else
                 {
                     printf("err %i ", type);
@@ -237,5 +241,13 @@ int main(int argc, char* argv[])
         my_state.cull_disconnected_players();
 
         my_state.reliable.tick(&my_state);
+
+        ///should do tick ping
+        if(my_state.ping_interval_clk.getElapsedTime().asMicroseconds() / 1000.f >= my_state.ping_interval_ms)
+        {
+            my_state.ping();
+
+            my_state.ping_interval_clk.restart();
+        }
     }
 }
