@@ -224,6 +224,7 @@ int main(int argc, char* argv[])
                 ///client pushing data to other clients
         }
 
+        ///heap corruption??
         sf::sleep(sf::milliseconds(1));
 
         //my_state.tick_all();
@@ -249,5 +250,7 @@ int main(int argc, char* argv[])
 
             my_state.ping_interval_clk.restart();
         }
+
+        my_state.broadcast_ping_data();
     }
 }

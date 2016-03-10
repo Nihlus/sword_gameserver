@@ -7,6 +7,8 @@
 #include <map>
 #include "../reliability_shared.hpp"
 
+#include <vec/vec.hpp>
+
 struct player
 {
     //int32_t player_slot = 0;
@@ -16,6 +18,9 @@ struct player
     float ping_ms = 150;
     sf::Clock clk;
     float max_ping_ms = 250;
+
+    //vec<float, 10> moving_avg = {0};
+    //int mov_c;
 
     ///I don't know if I do want to store these
     ///I could carry on using the existing broadcast system
@@ -83,6 +88,8 @@ struct server_reliability_manager
     void process_ack(byte_fetch& fetch);
 };
 
+///so, we want to pipe everyone's ping to everyone else
+
 ///so the client will send something like
 ///update component playerid componentenum value
 ///uuh. this is really a networking class?
@@ -144,6 +151,8 @@ struct game_state
     void process_ping_response(udp_sock& sock, byte_fetch& fetch, sockaddr_storage& who);
 
     void ping();
+
+    void broadcast_ping_data();
 
     void balance_teams();
     vec2f find_respawn_position(int team_id);

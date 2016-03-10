@@ -573,6 +573,12 @@ void game_state::process_ping_response(udp_sock& my_server, byte_fetch& fetch, s
         return;
     }
 
+    if(player_id >= player_list.size())
+    {
+        printf("Invalid player id %i\n", player_id);
+        return;
+    }
+
     player& play = player_list[player_id];
 
     float ctime = running_time.getElapsedTime().asMicroseconds() / 1000.f;
@@ -606,10 +612,40 @@ void game_state::ping()
     int none = -1;
 
     broadcast(vec.ptr, none);
+}
 
-    //printf("running time2 %f\n", last_time_ms);
+void game_state::broadcast_ping_data()
+{
+    static sf::Clock clk;
+    const float send_time_ms = 1000;
 
-    //printf("sping\n");
+    if(clk.getElapsedTime().asMicroseconds() / 1000.f < send_time_ms)
+        return;
+
+    clk.restart();
+
+    byte_vector vec;
+    vec.push_back(canary_start);
+    vec.push_back(message::PING_DATA);
+
+    int32_t num = player_list.size();
+
+    vec.push_back<int32_t>(num);
+
+    for(int i=0; i<player_list.size(); i++)
+    {
+        ///playerid int32_t
+        ///playerping float
+
+        vec.push_back<int32_t>(player_list[i].id);
+        vec.push_back<float>(player_list[i].ping_ms);
+    }
+
+    vec.push_back(canary_end);
+
+    int none = -1;
+
+    broadcast(vec.ptr, none);
 }
 
 ///oh dear. Ping doesn't want to be a global thing :[
