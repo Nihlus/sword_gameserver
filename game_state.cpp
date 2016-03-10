@@ -811,6 +811,7 @@ void balance_first_to_x(game_state& state)
 }
 
 ///well, more of an iterative balance. Should probably make it properly fully balance
+///team data isn't reliable. Am I an idiot?
 void balance_ffa(game_state& state)
 {
     int number_of_players = state.player_list.size();
