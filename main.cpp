@@ -68,8 +68,6 @@ void ping_master(game_state& my_state, int32_t port)
         return;
     }
 
-    //std::vector<char> dat{'p','i','n','g'};
-
     byte_vector vec;
 
     vec.push_back<int32_t>(my_state.player_list.size());
@@ -77,7 +75,7 @@ void ping_master(game_state& my_state, int32_t port)
 
     udp_send(sock, vec.ptr);
 
-    printf("ping\n");
+    //printf("ping\n");
 
     clk.restart();
 }
@@ -89,8 +87,8 @@ using namespace std;
 ///:[
 int main(int argc, char* argv[])
 {
-    sock_info inf = try_tcp_connect(MASTER_IP, MASTER_PORT);
-    tcp_sock to_server;
+    //sock_info inf = try_tcp_connect(MASTER_IP, MASTER_PORT);
+    //tcp_sock to_server;
 
     std::string host_port = GAMESERVER_PORT;
 
@@ -125,7 +123,7 @@ int main(int argc, char* argv[])
     {
         ping_master(my_state, pnum);
 
-        if(sock_readable(to_server))
+        /*if(sock_readable(to_server))
         {
             auto dat = tcp_recv(to_server);
         }
@@ -157,7 +155,7 @@ int main(int argc, char* argv[])
             }
 
             //continue;
-        }
+        }*/
 
         bool any_read = true;
 
