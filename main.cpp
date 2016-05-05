@@ -48,7 +48,7 @@ sock_info try_tcp_connect(const std::string& address, const std::string& port)
     return inf;
 }
 
-void ping_master()
+void ping_master(game_state& my_state, int32_t port)
 {
     static sf::Clock clk;
     static bool init = false;
@@ -68,9 +68,14 @@ void ping_master()
         return;
     }
 
-    std::vector<char> dat{'p','i','n','g'};
+    //std::vector<char> dat{'p','i','n','g'};
 
-    udp_send(sock, dat);
+    byte_vector vec;
+
+    vec.push_back<int32_t>(my_state.player_list.size());
+    vec.push_back<int32_t>(port);
+
+    udp_send(sock, vec.ptr);
 
     printf("ping\n");
 
@@ -118,7 +123,7 @@ int main(int argc, char* argv[])
 
     while(going)
     {
-        ping_master();
+        ping_master(my_state, pnum);
 
         if(sock_readable(to_server))
         {
