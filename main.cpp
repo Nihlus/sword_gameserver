@@ -48,6 +48,35 @@ sock_info try_tcp_connect(const std::string& address, const std::string& port)
     return inf;
 }
 
+void ping_master()
+{
+    static sf::Clock clk;
+    static bool init = false;
+
+    if(clk.getElapsedTime().asSeconds() < 1 && init)
+        return;
+
+    init = true;
+
+    udp_sock sock;
+
+    sock = udp_connect(MASTER_IP, MASTER_PORT);
+
+    if(!sock.valid())
+    {
+        printf("Error in ping master\n");
+        return;
+    }
+
+    std::vector<char> dat{'p','i','n','g'};
+
+    udp_send(sock, dat);
+
+    printf("ping\n");
+
+    clk.restart();
+}
+
 using namespace std;
 
 ///so as it turns out, you must use canaries with tcp as its a stream protocol
@@ -77,22 +106,11 @@ int main(int argc, char* argv[])
 
     printf("Registered on port %s\n", my_server.get_host_port().c_str());
 
-    //std::vector<tcp_sock> sockets;
-    //std::vector<sockaddr_store> store_sock;
-
     game_state my_state;
     my_state.mode_handler.current_game_mode = game_mode::FFA;
 
     my_state.set_map(0);
 
-    byte_vector test;
-    //test.push_back(canary_start);
-    //test.push_back(message::FORWARDING);
-    test.push_back<int32_t>(0);
-    test.push_back<int32_t>(0);
-    test.push_back<int32_t>(sizeof(cl_float4));
-    test.push_back<cl_float4>({0,0,0});
-    //test.push_back(canary_end);
 
     bool once = false;
 
@@ -100,6 +118,8 @@ int main(int argc, char* argv[])
 
     while(going)
     {
+        ping_master();
+
         if(sock_readable(to_server))
         {
             auto dat = tcp_recv(to_server);

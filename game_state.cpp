@@ -603,6 +603,7 @@ void game_state::process_ping_response(udp_sock& my_server, byte_fetch& fetch, s
 
     float ctime = running_time.getElapsedTime().asMicroseconds() / 1000.f;
 
+    ///so this is RTT
     play.ping_ms = ctime - last_time_ms;
 
     //if(play.ping_ms > play.max_ping_ms)
