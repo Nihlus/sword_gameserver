@@ -159,7 +159,7 @@ void game_state::cull_disconnected_players()
     }
 }
 
-bool operator==(sockaddr_storage& s1, sockaddr_storage& s2)
+/*bool operator==(sockaddr_storage& s1, sockaddr_storage& s2)
 {
     sockaddr_in* si1 = (sockaddr_in*)&s1;
     sockaddr_in* si2 = (sockaddr_in*)&s2;
@@ -169,7 +169,7 @@ bool operator==(sockaddr_storage& s1, sockaddr_storage& s2)
         return true;
 
     return false;
-}
+}*/
 
 void game_state::reset_player_disconnect_timer(sockaddr_storage& store)
 {
