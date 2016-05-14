@@ -111,7 +111,7 @@ namespace map_namespace
         {TOP, BOTTOM, RIGHT, LEFT}, ///FRONT
         {FRONT, BEHIND, BOTTOM, TOP}, ///LEFT
         {FRONT, BEHIND, TOP, BOTTOM}, ///RIGHT
-        {TOP, BOTTOM, RIGHT, LEFT}, ///BEHIND
+        {BOTTOM, TOP, RIGHT, LEFT}, ///BEHIND
     };
 
     ///to be fair, i could  have just defined the vecs in 2d space and probably worked it out from there
