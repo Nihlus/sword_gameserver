@@ -881,13 +881,6 @@ void balance_ffa(game_state& state)
 
 void game_state::balance_teams()
 {
-    //printf("cgame %i\n", mode_handler.current_game_mode);
-
-    if(mode_handler.current_game_mode != game_mode::FFA)
-    {
-        system("pause");
-    }
-
     if(mode_handler.current_game_mode == game_mode::FIRST_TO_X)
         return balance_first_to_x(*this);
 
