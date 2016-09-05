@@ -179,6 +179,9 @@ int main(int argc, char* argv[])
                     found_canary = fetch.get<int32_t>();
                 }
 
+                if(fetch.finished())
+                    continue;
+
                 int32_t type = fetch.get<int32_t>();
 
                 if(type == message::CLIENTJOINREQUEST)

@@ -363,7 +363,8 @@ void game_state::tick()
                 printf("invalid team for killer\n");
             }
 
-            mode_handler.current_session_state.team_killed[team]++;
+            if(team > 0)
+                mode_handler.current_session_state.team_killed[team]++;
 
             if(killer_team >= 0 && killer_team < TEAM_NUMS)
                 mode_handler.current_session_state.team_kills[killer_team]++;
@@ -833,11 +834,14 @@ void balance_first_to_x(game_state& state)
 
 ///well, more of an iterative balance. Should probably make it properly fully balance
 ///team data isn't reliable. Am I an idiot?
+///this is not a good balance, we want to distribute players evenly between teams
 void balance_ffa(game_state& state)
 {
     int number_of_players = state.player_list.size();
 
     int max_players_per_team = (number_of_players / TEAM_NUMS) + 1;
+
+    //printf("Max num of players per team %i\ncurrentplayernum %i\n", max_players_per_team, number_of_players);;
 
     std::vector<int32_t> too_big_teams;
     too_big_teams.resize(TEAM_NUMS);
@@ -877,6 +881,13 @@ void balance_ffa(game_state& state)
 
 void game_state::balance_teams()
 {
+    //printf("cgame %i\n", mode_handler.current_game_mode);
+
+    if(mode_handler.current_game_mode != game_mode::FFA)
+    {
+        system("pause");
+    }
+
     if(mode_handler.current_game_mode == game_mode::FIRST_TO_X)
         return balance_first_to_x(*this);
 
@@ -905,6 +916,8 @@ void game_state::periodic_team_broadcast()
         vec.push_back<int32_t>(i.id);
         vec.push_back<int32_t>(i.team);
         vec.push_back(canary_end);
+
+        printf("Team ass %i team player %i\n", i.team, i.id);
 
         int no_player = -1;
 
