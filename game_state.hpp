@@ -5,7 +5,7 @@
 #include "game_modes.hpp"
 #include <set>
 #include <map>
-#include "../reliability_shared.hpp"
+#include "../SwordFight/sword_server/reliability_shared.hpp"
 
 #include <vec/vec.hpp>
 

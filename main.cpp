@@ -2,11 +2,11 @@
 #include <net/shared.hpp>
 
 #include <vector>
-#include "../master_server/network_messages.hpp"
+#include "../sword_masterserver/network_messages.hpp"
 #include <vec/vec.hpp>
 #include "game_state.hpp"
 
-#include <cl/cl.h>
+#include <CL/cl.h>
 
 ///The code duplication and poor organisation is unreal. We need a cleanup :[
 void tcp_periodic_connect(tcp_sock& sock, const std::string& address)

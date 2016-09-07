@@ -1,5 +1,5 @@
 #include "game_state.hpp"
-#include "../master_server/network_messages.hpp"
+#include "../sword_masterserver/network_messages.hpp"
 
 void server_reliability_manager::tick(game_state* state)
 {
