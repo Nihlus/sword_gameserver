@@ -62,7 +62,7 @@ void ping_master(game_state& my_state, int32_t port, udp_sock& to_master)
     {
         if(to_master.udp_connected)
         {
-            to_master.close();
+	        to_master.close_socket();
             printf("Local sock error (this is not caused by master server termination), reopening socket");
         }
 
