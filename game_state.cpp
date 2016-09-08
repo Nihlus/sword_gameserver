@@ -910,7 +910,7 @@ void game_state::periodic_team_broadcast()
         vec.push_back<int32_t>(i.team);
         vec.push_back(canary_end);
 
-        printf("Team ass %i team player %i\n", i.team, i.id);
+        //printf("Team ass %i team player %i\n", i.team, i.id);
 
         int no_player = -1;
 
