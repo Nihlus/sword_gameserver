@@ -1473,3 +1473,6 @@ rel/bin/libssp-0.dll
 rel/bin/libstdc++-6.dll
 rel/cl2.cl
 .idea/
+
+# CMake exclusions
+!CMakeLists.txt
