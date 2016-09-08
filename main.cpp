@@ -48,7 +48,7 @@ sock_info try_tcp_connect(const std::string& address, const std::string& port)
     return inf;
 }
 
-void ping_master(game_state& my_state, int32_t port)
+void ping_master(game_state& my_state, int32_t port, udp_sock& to_master)
 {
     static sf::Clock clk;
     static bool init = false;
@@ -58,14 +58,17 @@ void ping_master(game_state& my_state, int32_t port)
 
     init = true;
 
-    udp_sock sock;
-
-    sock = udp_connect(MASTER_IP, MASTER_PORT);
-
-    if(!sock.valid())
+    if(!to_master.valid())
     {
-        printf("Error in ping master\n");
-        return;
+        if(to_master.udp_connected)
+        {
+            to_master.close();
+            printf("Local sock error (this is not caused by master server termination), reopening socket");
+        }
+
+        to_master = udp_connect(MASTER_IP, MASTER_PORT);
+
+        printf("Creating socket to master server\n");
     }
 
     byte_vector vec;
@@ -73,9 +76,7 @@ void ping_master(game_state& my_state, int32_t port)
     vec.push_back<int32_t>(my_state.player_list.size());
     vec.push_back<int32_t>(port);
 
-    udp_send(sock, vec.ptr);
-
-    //printf("ping\n");
+    udp_send(to_master, vec.ptr);
 
     clk.restart();
 }
@@ -114,6 +115,8 @@ int main(int argc, char* argv[])
 
     my_state.set_map(0);
 
+    udp_sock to_master;
+
 
     bool once = false;
 
@@ -121,7 +124,7 @@ int main(int argc, char* argv[])
 
     while(going)
     {
-        ping_master(my_state, pnum);
+        ping_master(my_state, pnum, to_master);
 
         /*if(sock_readable(to_server))
         {
